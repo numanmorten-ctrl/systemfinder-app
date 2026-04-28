@@ -3,13 +3,16 @@ import pandas as pd
 
 st.title("System sammenligning")
 
-# læs Excel (vigtigt!)
 df = pd.read_excel("10_list.xlsx", header=1)
 
-# vælg systemer (brug korrekt kolonne!)
+# ryd data
+systemer = df["System_Variant_Name_Local_sys_desc_pdm_gpdm"].dropna()
+systemer = systemer[systemer != "Optional"]
+systemer = systemer.unique()
+
 valg = st.multiselect(
     "Vælg systemer",
-    df["System_Variant_Name_Local_sys_desc_pdm_gpdm"]
+    sorted(systemer)
 )
 
 if valg:
