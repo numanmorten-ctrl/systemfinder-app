@@ -18,7 +18,7 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping til labels
+# mapping
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -45,8 +45,8 @@ units = {
     "Lydklasse (R’w)": "dB"
 }
 
-# system navn kolonne
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
+image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
 # dropdown
 systemer = df[name_col].dropna()
@@ -57,31 +57,43 @@ valg = st.multiselect(
     sorted(systemer.unique())
 )
 
-# vis sammenligning
+# ---------- VIS BILLEDER ----------
+if valg:
+    st.subheader("Systemer")
+
+    selected = df[df[name_col].isin(valg)]
+
+    cols = st.columns(len(selected))
+
+    for i, (_, row) in enumerate(selected.iterrows()):
+        with cols[i]:
+            img = row.get(image_col, None)
+
+            if pd.notna(img):
+                st.image(img, use_container_width=True)
+
+            st.caption(row[name_col])
+
+# ---------- VIS DATA ----------
 if valg:
     comp = df[df[name_col].isin(valg)]
 
-    # find kun kolonner der findes
     available_cols = [col for col in mapping.keys() if col in comp.columns]
 
-    # behold kun relevante kolonner
     comp = comp[[name_col] + available_cols]
 
-    # rename
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
-    # transponer
     comp = comp.set_index(name_col).T
 
-    # ---------- FORMATTERING ----------
-
+    # formatting
     comp = comp.fillna("-")
 
     comp = comp.apply(lambda col: col.map(
         lambda x: round(x, 2) if isinstance(x, (int, float)) else x
     ))
 
-    # tilføj enheder
+    # enheder
     for row in comp.index:
         if row in units:
             unit = units[row]
