@@ -6,10 +6,9 @@ st.title("System sammenligning")
 # læs Excel (række 2 = header)
 df = pd.read_excel("10_list.xlsx", header=1)
 
-# gør kolonnenavne unikke (undgår crash)
+# gør kolonnenavne unikke
 cols = []
 counts = {}
-
 for col in df.columns:
     if col in counts:
         counts[col] += 1
@@ -17,10 +16,9 @@ for col in df.columns:
     else:
         counts[col] = 0
         cols.append(col)
-
 df.columns = cols
 
-# mapping til pæne Systemfinder-navne
+# mapping til pæne navne
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -39,7 +37,7 @@ mapping = {
 # system navn kolonne
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 
-# ryd dropdown data
+# dropdown (rens data)
 systemer = df[name_col].dropna()
 systemer = systemer[systemer != "Optional"]
 
@@ -52,11 +50,14 @@ valg = st.multiselect(
 if valg:
     comp = df[df[name_col].isin(valg)]
 
-    # behold kun relevante kolonner
-    comp = comp[[name_col] + list(mapping.keys())]
+    # find kun kolonner der findes
+    available_cols = [col for col in mapping.keys() if col in df.columns]
 
-    # rename til pæne navne
-    comp = comp.rename(columns=mapping)
+    # behold kun relevante kolonner
+    comp = comp[[name_col] + available_cols]
+
+    # rename kun eksisterende
+    comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
     # transponer (Systemfinder style)
     comp = comp.set_index(name_col).T
