@@ -45,6 +45,7 @@ units = {
     "Lydklasse (R’w)": "dB"
 }
 
+# system navn kolonne
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 
 # dropdown
@@ -56,22 +57,20 @@ valg = st.multiselect(
     sorted(systemer.unique())
 )
 
+# vis sammenligning
 if valg:
     comp = df[df[name_col].isin(valg)]
 
-    gwp_col = "Global_Warming_Potential_sys_met_td_pdm_gpdm"
-
-    if gwp_col in comp.columns:
-        comp = comp.sort_values(by=gwp_col, ascending=True)
-        best = comp.iloc[0]
-        st.success(f"Bedste løsning (lavest CO₂): {best[name_col]}")
-
+    # find kun kolonner der findes
     available_cols = [col for col in mapping.keys() if col in comp.columns]
 
+    # behold kun relevante kolonner
     comp = comp[[name_col] + available_cols]
 
+    # rename
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
+    # transponer
     comp = comp.set_index(name_col).T
 
     # ---------- FORMATTERING ----------
