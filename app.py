@@ -18,7 +18,7 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping til labels
+# mapping
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -45,23 +45,37 @@ units = {
     "Lydklasse (R’w)": "dB"
 }
 
+# kolonner
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
+id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# dropdown
-systemer = df[name_col].dropna()
-systemer = systemer[systemer != "Optional"]
+# ---------- LAV DISPLAY LISTE ----------
+df_valid = df[[id_col, name_col]].dropna()
 
-valg = st.multiselect(
+# fjern "Optional"
+df_valid = df_valid[df_valid[name_col] != "Optional"]
+
+# lav label: "Navn (ID)"
+df_valid["display"] = df_valid[name_col] + " (" + df_valid[id_col] + ")"
+
+# fjern dubletter på ID (vigtigt)
+df_valid = df_valid.drop_duplicates(subset=[id_col])
+
+# dropdown
+valg_display = st.multiselect(
     "Vælg systemer",
-    sorted(systemer.unique())
+    sorted(df_valid["display"])
 )
 
+# map tilbage til ID
+valgte_ids = df_valid[df_valid["display"].isin(valg_display)][id_col]
+
 # ---------- VIS BILLEDER ----------
-if valg:
+if len(valgte_ids) > 0:
     st.subheader("Systemer")
 
-    selected = df[df[name_col].isin(valg)]
+    selected = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
 
     cols_layout = st.columns(len(selected))
 
@@ -78,28 +92,24 @@ if valg:
             )
 
 # ---------- VIS DATA ----------
-if valg:
-    comp = df[df[name_col].isin(valg)]
+if len(valgte_ids) > 0:
+    comp = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
 
-    # find relevante kolonner
     available_cols = [col for col in mapping.keys() if col in comp.columns]
 
     comp = comp[[name_col] + available_cols]
 
-    # rename
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
-    # transponer
     comp = comp.set_index(name_col).T
 
-    # ---------- FORMATTERING ----------
     comp = comp.fillna("-")
 
     comp = comp.apply(lambda col: col.map(
         lambda x: round(x, 2) if isinstance(x, (int, float)) else x
     ))
 
-    # tilføj enheder
+    # enheder
     for row in comp.index:
         if row in units:
             unit = units[row]
