@@ -62,13 +62,15 @@ if valg:
     # transponer (Systemfinder style)
     comp = comp.set_index(name_col).T
 
-    # --- FORMATTERING (det der gør det lækkert) ---
+    # ---------- FORMATTERING ----------
 
     # fjern None / NaN
     comp = comp.fillna("-")
 
-    # rund tal pænt
-    comp = comp.applymap(lambda x: round(x, 2) if isinstance(x, (int, float)) else x)
+    # rund tal pænt (stabil version)
+    comp = comp.apply(lambda col: col.map(
+        lambda x: round(x, 2) if isinstance(x, (int, float)) else x
+    ))
 
     # tilføj enhed til GWP
     if "Globalt opvarmningspotentiale" in comp.index:
