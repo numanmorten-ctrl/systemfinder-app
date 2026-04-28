@@ -18,7 +18,7 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping til pæne navne
+# mapping til pæne Systemfinder-navne
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -61,5 +61,19 @@ if valg:
 
     # transponer (Systemfinder style)
     comp = comp.set_index(name_col).T
+
+    # --- FORMATTERING (det der gør det lækkert) ---
+
+    # fjern None / NaN
+    comp = comp.fillna("-")
+
+    # rund tal pænt
+    comp = comp.applymap(lambda x: round(x, 2) if isinstance(x, (int, float)) else x)
+
+    # tilføj enhed til GWP
+    if "Globalt opvarmningspotentiale" in comp.index:
+        comp.loc["Globalt opvarmningspotentiale"] = comp.loc["Globalt opvarmningspotentiale"].apply(
+            lambda x: f"{x} kg CO₂e" if x != "-" else x
+        )
 
     st.dataframe(comp)
