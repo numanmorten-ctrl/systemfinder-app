@@ -6,7 +6,18 @@ st.title("System sammenligning")
 df = pd.read_excel("10_list.xlsx", header=1)
 
 # gør kolonnenavne unikke
-df.columns = pd.io.parsers.ParserBase({'names': df.columns})._maybe_dedup_names(df.columns)
+cols = []
+counts = {}
+
+for col in df.columns:
+    if col in counts:
+        counts[col] += 1
+        cols.append(f"{col}_{counts[col]}")
+    else:
+        counts[col] = 0
+        cols.append(col)
+
+df.columns = cols
 
 # ryd systemnavne
 systemer = df["System_Variant_Name_Local_sys_desc_pdm_gpdm"].dropna()
@@ -20,7 +31,5 @@ valg = st.multiselect(
 
 if valg:
     comp = df[df["System_Variant_Name_Local_sys_desc_pdm_gpdm"].isin(valg)]
-
     comp = comp.set_index("System_Variant_Name_Local_sys_desc_pdm_gpdm").T
-
     st.dataframe(comp)
