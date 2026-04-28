@@ -18,7 +18,7 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping
+# mapping til labels
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -63,37 +63,43 @@ if valg:
 
     selected = df[df[name_col].isin(valg)]
 
-    cols = st.columns(len(selected))
+    cols_layout = st.columns(len(selected))
 
     for i, (_, row) in enumerate(selected.iterrows()):
-        with cols[i]:
+        with cols_layout[i]:
             img = row.get(image_col, None)
 
             if pd.notna(img):
-                st.image(img, use_container_width=True)
+                st.image(img, width=150)
 
-            st.caption(row[name_col])
+            st.markdown(
+                f"<div style='text-align:center'>{row[name_col]}</div>",
+                unsafe_allow_html=True
+            )
 
 # ---------- VIS DATA ----------
 if valg:
     comp = df[df[name_col].isin(valg)]
 
+    # find relevante kolonner
     available_cols = [col for col in mapping.keys() if col in comp.columns]
 
     comp = comp[[name_col] + available_cols]
 
+    # rename
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
+    # transponer
     comp = comp.set_index(name_col).T
 
-    # formatting
+    # ---------- FORMATTERING ----------
     comp = comp.fillna("-")
 
     comp = comp.apply(lambda col: col.map(
         lambda x: round(x, 2) if isinstance(x, (int, float)) else x
     ))
 
-    # enheder
+    # tilføj enheder
     for row in comp.index:
         if row in units:
             unit = units[row]
