@@ -3,11 +3,13 @@ import pandas as pd
 
 st.title("System sammenligning")
 
+# læs Excel (række 2 = header)
 df = pd.read_excel("10_list.xlsx", header=1)
 
-# gør kolonnenavne unikke
+# gør kolonnenavne unikke (undgår crash)
 cols = []
 counts = {}
+
 for col in df.columns:
     if col in counts:
         counts[col] += 1
@@ -15,9 +17,10 @@ for col in df.columns:
     else:
         counts[col] = 0
         cols.append(col)
+
 df.columns = cols
 
-# mapping (Systemfinder labels)
+# mapping til pæne Systemfinder-navne
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -36,7 +39,7 @@ mapping = {
 # system navn kolonne
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 
-# dropdown
+# ryd dropdown data
 systemer = df[name_col].dropna()
 systemer = systemer[systemer != "Optional"]
 
@@ -45,6 +48,7 @@ valg = st.multiselect(
     sorted(systemer.unique())
 )
 
+# vis sammenligning
 if valg:
     comp = df[df[name_col].isin(valg)]
 
@@ -54,7 +58,7 @@ if valg:
     # rename til pæne navne
     comp = comp.rename(columns=mapping)
 
-    # sæt navn som kolonner
+    # transponer (Systemfinder style)
     comp = comp.set_index(name_col).T
 
     st.dataframe(comp)
