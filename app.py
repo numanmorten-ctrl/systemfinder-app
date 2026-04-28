@@ -3,7 +3,7 @@ import pandas as pd
 
 st.title("System sammenligning")
 
-# læs Excel (række 2 = header)
+# læs Excel
 df = pd.read_excel("10_list.xlsx", header=1)
 
 # gør kolonnenavne unikke
@@ -18,7 +18,7 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping til pæne Systemfinder-navne
+# mapping til labels
 mapping = {
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
@@ -34,10 +34,20 @@ mapping = {
     "Wall_Grid_sys_desc_pdm_gpdm": "Skelet type"
 }
 
-# system navn kolonne
+# enheder
+units = {
+    "Globalt opvarmningspotentiale": "kg CO₂e",
+    "Isoleringstykkelse": "mm",
+    "Maksimal væghøjde": "mm",
+    "Stolpe afstand c/c": "mm",
+    "Vægt pr. m²": "kg/m²",
+    "Luftlydisolation - dB [R'w] C50": "dB",
+    "Lydklasse (R’w)": "dB"
+}
+
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 
-# dropdown (rens data)
+# dropdown
 systemer = df[name_col].dropna()
 systemer = systemer[systemer != "Optional"]
 
@@ -46,36 +56,38 @@ valg = st.multiselect(
     sorted(systemer.unique())
 )
 
-# vis sammenligning
 if valg:
     comp = df[df[name_col].isin(valg)]
 
-    # find kun kolonner der findes
-    available_cols = [col for col in mapping.keys() if col in df.columns]
+    gwp_col = "Global_Warming_Potential_sys_met_td_pdm_gpdm"
 
-    # behold kun relevante kolonner
+    if gwp_col in comp.columns:
+        comp = comp.sort_values(by=gwp_col, ascending=True)
+        best = comp.iloc[0]
+        st.success(f"Bedste løsning (lavest CO₂): {best[name_col]}")
+
+    available_cols = [col for col in mapping.keys() if col in comp.columns]
+
     comp = comp[[name_col] + available_cols]
 
-    # rename kun eksisterende
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
-    # transponer (Systemfinder style)
     comp = comp.set_index(name_col).T
 
     # ---------- FORMATTERING ----------
 
-    # fjern None / NaN
     comp = comp.fillna("-")
 
-    # rund tal pænt (stabil version)
     comp = comp.apply(lambda col: col.map(
         lambda x: round(x, 2) if isinstance(x, (int, float)) else x
     ))
 
-    # tilføj enhed til GWP
-    if "Globalt opvarmningspotentiale" in comp.index:
-        comp.loc["Globalt opvarmningspotentiale"] = comp.loc["Globalt opvarmningspotentiale"].apply(
-            lambda x: f"{x} kg CO₂e" if x != "-" else x
-        )
+    # tilføj enheder
+    for row in comp.index:
+        if row in units:
+            unit = units[row]
+            comp.loc[row] = comp.loc[row].apply(
+                lambda x: f"{x} {unit}" if x != "-" else x
+            )
 
-    st.dataframe(comp)
+    st.dataframe(comp, height=500, use_container_width=True)
