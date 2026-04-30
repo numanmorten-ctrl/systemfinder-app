@@ -208,8 +208,6 @@ if image_row:
 col_widths = [120] + [180] * (len(comp.columns))
 table = Table(data, colWidths=col_widths)
 
-table = Table(data, colWidths=col_widths)
-
 table.setStyle(TableStyle([
     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -217,7 +215,6 @@ table.setStyle(TableStyle([
 ]))
 
 elements.append(table)
-    elements.append(table)
 
     doc.build(elements)
     buffer.seek(0)
