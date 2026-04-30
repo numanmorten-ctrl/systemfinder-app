@@ -37,104 +37,112 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ---------- FIX: DISPLAY LABEL ----------
-df["display_name"] = df[name_col] + "  (" + df[id_col] + ")"
+# ---------- DISPLAY NAME ----------
+df["display_name"] = df[name_col] + " (" + df[id_col] + ")"
 
 # ---------- SELECT ----------
 valg_display = st.multiselect("Vælg systemer", df["display_name"])
-
-# find tilbage til ID (det unikke)
 valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
 if len(valg_ids) > 0:
-
-    comp = df[df[id_col].isin(valg_ids)].copy()
-
-    # brug display navn som kolonne (så brugeren ser begge)
-    comp = comp.set_index("display_name").T
-
-    # fjern dubletter
-    comp = comp.loc[~comp.index.duplicated()]
 
     # ---------- BILLEDER ----------
     st.subheader("Systemer")
     cols_img = st.columns(len(valg_display))
 
     for i, system in enumerate(valg_display):
-        try:
-            img_url = df[df["display_name"] == system][image_col].values[0]
+        rows = df[df["display_name"] == system]
+        if not rows.empty:
+            img_url = rows[image_col].values[0]
             if isinstance(img_url, str) and img_url.startswith("http"):
                 cols_img[i].image(img_url, width=180)
                 cols_img[i].caption(system)
-        except:
-            pass
 
-  # ---------- MAPPING ----------
-mapping = {
-    "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
-    "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
-    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
-    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
-    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
+    # ---------- MAPPING ----------
+    mapping = {
+        "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
+        "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
+        "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
+        "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
+        "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
 
-    "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
-    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
-    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
-    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
+        "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
+        "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
+        "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
+        "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
 
-    "Cladding_sys_desc_pdm_gpdm": "Beklædning",
-    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
-    "Profile_sys_desc_pdm_gpdm": "Profil",
-    "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
-    "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
+        "Cladding_sys_desc_pdm_gpdm": "Beklædning",
+        "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
+        "Profile_sys_desc_pdm_gpdm": "Profil",
+        "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
+        "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
 
-    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
-}
+        "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
+    }
 
-# ---------- VÆLG KUN DE KOLONNER VI VIL HAVE ----------
-cols_to_use = list(mapping.keys()) + ["display_name"]
+    # ---------- ROBUST KOLONNEVALG ----------
+    existing_cols = [col for col in mapping.keys() if col in df.columns]
+    cols_to_use = existing_cols + ["display_name"]
 
-comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
+    comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
 
-# rename
-comp = comp.rename(columns=mapping)
+    # rename kun eksisterende
+    mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
+    comp = comp.rename(columns=mapping_filtered)
 
-# transpose så egenskaber er rækker
-comp = comp.set_index("display_name").T
+    # transpose
+    comp = comp.set_index("display_name").T
 
-# fjern tomme rækker
-comp = comp.dropna(how="all")
+    # fjern tomme
+    comp = comp.dropna(how="all")
 
-# gør alt til string
-comp = comp.astype(str).replace("nan", "-")
+    # string + fix nan
+    comp = comp.astype(str).replace("nan", "-")
 
-# ---------- TAB FUNKTION ----------
-def show_tab(rows):
-    rows_existing = [r for r in rows if r in comp.index]
+    # ---------- UNITS ----------
+    units = {
+        "GWP": " kg CO₂e",
+        "Rw": " dB",
+        "C50": " dB",
+        "Vægt": " kg/m²",
+        "Højde": " mm",
+        "Tykkelse": " mm",
+        "Stolpeafstand": " mm",
+        "Isolering tykkelse": " mm"
+    }
 
-    if rows_existing:
-        st.dataframe(
-            comp.loc[rows_existing],
-            width="stretch",
-            height=400
-        )
-    else:
-        st.info("Ingen data")
+    for row in comp.index:
+        if row in units:
+            comp.loc[row] = comp.loc[row] + units[row]
 
-# ---------- TABS ----------
-tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
+    # ---------- TAB FUNCTION ----------
+    def show_tab(rows):
+        rows_existing = [r for r in rows if r in comp.index]
 
-with tab1:
-    show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
+        if rows_existing:
+            st.dataframe(
+                comp.loc[rows_existing],
+                use_container_width=True,
+                height=400
+            )
+        else:
+            st.info("Ingen data")
 
-with tab2:
-    show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
+    # ---------- TABS ----------
+    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
-with tab3:
-    show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
+    with tab1:
+        show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
 
-with tab4:
-    show_tab(["Overflade"])
+    with tab2:
+        show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
+
+    with tab3:
+        show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
+
+    with tab4:
+        show_tab(["Overflade"])
+
     # ---------- PDF ----------
     def download_image(url):
         try:
@@ -160,17 +168,16 @@ with tab4:
         elements.append(Paragraph("System sammenligning", styles['Title']))
         elements.append(Spacer(1, 10))
 
-        # SYSTEMER + BILLEDER
+        # BILLEDER
         for system in valg_display:
-            try:
-                img_url = df[df["display_name"] == system][image_col].values[0]
+            rows = df[df["display_name"] == system]
+            if not rows.empty:
+                img_url = rows[image_col].values[0]
                 img = download_image(img_url)
                 if img:
                     elements.append(Image(img, width=100, height=100))
                     elements.append(Paragraph(system, styles['Normal']))
                     elements.append(Spacer(1, 10))
-            except:
-                pass
 
         # TABLE
         data = [["Egenskab"] + list(comp.columns)]
