@@ -2,7 +2,65 @@ import streamlit as st
 import pandas as pd
 st.image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true", width=150)
 st.title("System sammenligning")
+# 🎨 CSS (STEP 3)
+st.markdown("""
+<style>
 
+/* ---------- GENEREL ---------- */
+html, body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* ---------- TITEL ---------- */
+h1 {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* ---------- TABS ---------- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: #EDEFF2;
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: #1F2A37;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: #005AA7 !important;
+    color: white !important;
+}
+
+/* ---------- TABLE ---------- */
+.stDataFrame {
+    border: 1px solid #E1E5EA;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* ---------- DROPDOWN ---------- */
+[data-baseweb="select"] {
+    background-color: white;
+    border: 1px solid #D0D5DD;
+    border-radius: 6px;
+}
+
+/* ---------- BILLEDER ---------- */
+img {
+    border-radius: 6px;
+}
+
+/* ---------- LABELS ---------- */
+label {
+    font-weight: 500;
+    color: #1F2A37;
+}
+
+</style>
+""", unsafe_allow_html=True)
 # læs Excel
 df = pd.read_excel("10_list.xlsx", header=1)
 
