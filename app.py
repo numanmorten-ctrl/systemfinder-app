@@ -215,6 +215,8 @@ table.setStyle(TableStyle([
     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
     ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
 ]))
+
+elements.append(table)
     elements.append(table)
 
     doc.build(elements)
