@@ -1,0 +1,16 @@
+[theme]
+
+# 🔵 Primær (Knauf blå)
+primaryColor = "#005AA7"
+
+# ⚪ Baggrund (hele appen)
+backgroundColor = "#F5F7F9"
+
+# ⚪ Cards / tabeller
+secondaryBackgroundColor = "#FFFFFF"
+
+# ⚫ Tekst
+textColor = "#1F2A37"
+
+# Font (matcher ret godt SystemFinder)
+font = "sans serif"
