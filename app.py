@@ -42,6 +42,7 @@ df["display_name"] = df[name_col] + " (" + df[id_col] + ")"
 valg_display = st.multiselect("Vælg systemer", df["display_name"])
 valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
+# 🔴 KUN hvis der er valgt noget
 if len(valg_ids) > 0:
 
     # ---------- BILLEDER ----------
@@ -78,52 +79,53 @@ if len(valg_ids) > 0:
         "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
     }
 
-    # ---------- SIKKER KOLONNEVALG ----------
+    # ---------- DATA ----------
     existing_cols = [col for col in mapping.keys() if col in df.columns]
     cols_to_use = existing_cols + ["display_name"]
 
     comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
 
-    # rename
     mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
     comp = comp.rename(columns=mapping_filtered)
 
-# ---------- FIX DECIMALER (SMART) ----------
-for col in comp.columns:
-    if col != "display_name":
-        # prøv kun hvis det faktisk er tal
-        if pd.api.types.is_numeric_dtype(comp[col]):
-            comp[col] = comp[col].round(2)
+    # ---------- DECIMALER ----------
+    for col in comp.columns:
+        if col != "display_name":
+            if pd.api.types.is_numeric_dtype(comp[col]):
+                comp[col] = comp[col].round(2)
 
     # ---------- TRANSPOSE ----------
     comp = comp.set_index("display_name").T
     comp = comp.dropna(how="all")
 
-    # ---------- FORMATTERING ----------
-def format_value(val):
-    if pd.isna(val):
-        return "-"
-    if isinstance(val, float):
-        return f"{val:.2f}".rstrip("0").rstrip(".")
-    return str(val)
+    # ---------- FORMAT ----------
+    def format_value(val):
+        if pd.isna(val):
+            return "-"
+        if isinstance(val, float):
+            return f"{val:.2f}".rstrip("0").rstrip(".")
+        return str(val)
 
-comp = comp.applymap(format_value)
-comp = comp.fillna("-")
+    comp = comp.applymap(format_value)
+    comp = comp.fillna("-")
 
-units = {
-    "GWP": " kg CO₂e",
-    "Rw": " dB",
-    "C50": " dB",
-    "Vægt": " kg/m²",
-    "Højde": " mm",
-    "Tykkelse": " mm",
-    "Stolpeafstand": " mm",
-    "Isolering tykkelse": " mm"
-}
+    # ---------- UNITS ----------
+    units = {
+        "GWP": " kg CO₂e",
+        "Rw": " dB",
+        "C50": " dB",
+        "Vægt": " kg/m²",
+        "Højde": " mm",
+        "Tykkelse": " mm",
+        "Stolpeafstand": " mm",
+        "Isolering tykkelse": " mm"
+    }
 
     for row in comp.index:
         if row in units:
-            comp.loc[row] = comp.loc[row].apply(lambda x: x + units[row] if x != "-" else x)
+            comp.loc[row] = comp.loc[row].apply(
+                lambda x: x + units[row] if x != "-" else x
+            )
 
     # ---------- TAB ----------
     def show_tab(rows):
@@ -159,7 +161,7 @@ units = {
         except:
             return None
 
-    def lav_pdf(comp, valg_display):
+    def lav_pdf(comp):
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -194,7 +196,7 @@ units = {
 
     st.download_button(
         "📄 Download PDF",
-        lav_pdf(comp, valg_display),
+        lav_pdf(comp),
         file_name="system_sammenligning.pdf",
         mime="application/pdf"
     )
