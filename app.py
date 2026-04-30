@@ -187,7 +187,7 @@ for system in valg_display:
             img = download_image(img_url)
 
             if img:
-                cell = Table([
+cell = Table([
     [Image(img, width=100, height=100)],
     [Paragraph(system, styles['Normal'])]
 ])
