@@ -36,7 +36,7 @@ mapping = {
     "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
 
     "Cladding_sys_desc_pdm_gpdm": "Beklædning",
-    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
+    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag pr. side",
     "Profile_sys_desc_pdm_gpdm": "Profil",
     "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
     "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
@@ -104,7 +104,7 @@ if len(valgte_ids) > 0:
             )
 
     # ---------- TABS ----------
-    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Akustik"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
     def show_tab(rows):
         existing = [r for r in rows if r in comp.index]
@@ -113,8 +113,9 @@ if len(valgte_ids) > 0:
         else:
             st.info("Ingen data")
 
+    # 🔥 C50 flyttet til Basis
     with tab1:
-        show_tab(["GWP", "Rw", "Brand", "Vægt"])
+        show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
 
     with tab2:
         show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
@@ -122,5 +123,6 @@ if len(valgte_ids) > 0:
     with tab3:
         show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
 
+    # 🔥 Kun overflade
     with tab4:
-        show_tab(["C50", "Overflade"])
+        show_tab(["Overflade"])
