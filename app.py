@@ -88,26 +88,27 @@ if len(valg_ids) > 0:
     mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
     comp = comp.rename(columns=mapping_filtered)
 
-    # ---------- FIX DECIMALER ----------
-    for col in comp.columns:
-        if col != "display_name":
-            comp[col] = pd.to_numeric(comp[col], errors="ignore")
-
-    comp = comp.round(2)
+# ---------- FIX DECIMALER (SMART) ----------
+for col in comp.columns:
+    if col != "display_name":
+        # prøv kun hvis det faktisk er tal
+        if pd.api.types.is_numeric_dtype(comp[col]):
+            comp[col] = comp[col].round(2)
 
     # ---------- TRANSPOSE ----------
     comp = comp.set_index("display_name").T
     comp = comp.dropna(how="all")
 
     # ---------- FORMATTERING ----------
-    def format_value(val):
-        if pd.isna(val):
-            return "-"
-        if isinstance(val, float):
-            return f"{val:.2f}".rstrip("0").rstrip(".")
-        return str(val)
+def format_value(val):
+    if pd.isna(val):
+        return "-"
+    if isinstance(val, float):
+        return f"{val:.2f}".rstrip("0").rstrip(".")
+    return str(val)
 
-    comp = comp.applymap(format_value)
+comp = comp.applymap(format_value)
+comp = comp.fillna("-")
 
     # ---------- UNITS ----------
     units = {
