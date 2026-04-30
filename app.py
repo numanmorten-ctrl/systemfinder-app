@@ -121,12 +121,21 @@ for row in comp_display.index:
 # ---------- TAB FUNKTION ----------
 def show_tab(rows):
     rows_existing = [r for r in rows if r in comp_display.index]
+
     if rows_existing:
-        st.dataframe(
-            comp_display.loc[rows_existing],
-            use_container_width=True,
-            height=400
-        )
+        df_show = comp_display.loc[rows_existing]
+
+        # fjern rækker hvor ALLE værdier er "-"
+        df_show = df_show[~(df_show == "-").all(axis=1)]
+
+        if not df_show.empty:
+            st.dataframe(
+                df_show,
+                use_container_width=True,
+                height=100 + len(df_show) * 35  # 👈 dynamisk højde
+            )
+        else:
+            st.info("Ingen data")
     else:
         st.info("Ingen data")
 
