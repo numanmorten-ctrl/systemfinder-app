@@ -42,8 +42,7 @@ df["display_name"] = df[name_col].astype(str) + " (" + df[id_col].astype(str) + 
 # ---------- SELECT ----------
 valg_display = st.multiselect("Vælg systemer", df["display_name"])
 
-if len(valg_display) == 0:
-    st.info("Vælg mindst ét system")
+if not valg_display:
     st.stop()
 
 valg_ids = df[df["display_name"].isin(valg_display)][id_col]
@@ -82,85 +81,31 @@ mapping = {
     "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
 }
 
-# ---------- BUILD DATA ----------
+# ---------- DATA ----------
 comp = df[df[id_col].isin(valg_ids)].copy()
 
-existing_cols = [col for col in mapping.keys() if col in comp.columns]
-
-if len(existing_cols) == 0:
-    st.error("Ingen data matcher mapping")
-    st.stop()
-
+existing_cols = [col for col in mapping if col in comp.columns]
 cols_to_use = existing_cols + ["display_name"]
+
 comp = comp[cols_to_use]
 
-# rename
 mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
 comp = comp.rename(columns=mapping_filtered)
 
-# ---------- NUMERIC FIX ----------
-for col in comp.columns:
-    if col != "display_name":
-        comp[col] = pd.to_numeric(comp[col], errors="coerce")
-
-# ---------- TRANSPOSE ----------
 comp = comp.set_index("display_name").T
-
-if comp.empty:
-    st.warning("Ingen data efter filtrering")
-    st.stop()
-
 comp = comp.dropna(how="all")
 
-# ---------- FORMAT ----------
-def format_value(val):
-    if val is None or pd.isna(val):
-        return "-"
-    if isinstance(val, (int, float)):
-        return f"{val:.2f}".rstrip("0").rstrip(".")
-    return str(val)
+# ---------- SIMPEL FORMAT ----------
+comp = comp.astype(str).replace("nan", "-")
 
-# 🔥 FIX: brug stack i stedet for applymap
-comp = comp.stack().map(format_value).unstack()
-
-# ---------- UNITS (BULLETPROOF) ----------
-units = {
-    "GWP": " kg CO₂e",
-    "Rw": " dB",
-    "C50": " dB",
-    "Vægt": " kg/m²",
-    "Højde": " mm",
-    "Tykkelse": " mm",
-    "Stolpeafstand": " mm",
-    "Isolering tykkelse": " mm"
-}
-
-def add_unit(row_name, value):
-    if value == "-" or pd.isna(value):
-        return "-"
-    if row_name in units:
-        return f"{value}{units[row_name]}"
-    return value
-
-comp = comp.copy()
-
-for row in comp.index:
-    comp.loc[row] = [add_unit(row, v) for v in comp.loc[row]]
-
-# ---------- TAB FUNKTION ----------
+# ---------- TABS ----------
 def show_tab(rows):
     rows_existing = [r for r in rows if r in comp.index]
-
     if rows_existing:
-        st.dataframe(
-            comp.loc[rows_existing],
-            use_container_width=True,
-            height=400
-        )
+        st.dataframe(comp.loc[rows_existing], use_container_width=True)
     else:
         st.info("Ingen data")
 
-# ---------- TABS ----------
 tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
 with tab1:
@@ -182,7 +127,7 @@ def download_image(url):
     except:
         return None
 
-def lav_pdf(comp, valg_display):
+def lav_pdf(comp):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -217,7 +162,7 @@ def lav_pdf(comp, valg_display):
 
 st.download_button(
     "📄 Download PDF",
-    lav_pdf(comp, valg_display),
+    lav_pdf(comp),
     file_name="system_sammenligning.pdf",
     mime="application/pdf"
 )
