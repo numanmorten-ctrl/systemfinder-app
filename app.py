@@ -69,42 +69,72 @@ if len(valg_ids) > 0:
         except:
             pass
 
-    # ---------- MAPPING ----------
-    mapping = {
-        "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP (kg CO2e)",
-        "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw (dB)",
-        "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50 (dB)",
-        "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
-        "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt (kg/m²)",
-        "Partition_Height_sys_met_td_pdm_gpdm": "Højde (mm)",
-        "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand (mm)",
-        "Insulation_Thickness_sys_met_td_pdm_gpdm": "Tykkelse (mm)",
-        "Profile_sys_desc_pdm_gpdm": "Profil",
-        "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
-        "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade klasse"
-    }
+  # ---------- MAPPING ----------
+mapping = {
+    "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
+    "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
+    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
+    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
+    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
 
-    comp = comp.rename(index=mapping)
+    "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
+    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
+    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
+    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
 
-    # ---------- CLEAN ----------
-    comp = comp.astype(str).fillna("-")
+    "Cladding_sys_desc_pdm_gpdm": "Beklædning",
+    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
+    "Profile_sys_desc_pdm_gpdm": "Profil",
+    "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
+    "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
 
-    # ---------- TABS ----------
-    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
+    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
+}
 
-    with tab1:
-        st.dataframe(comp, width="stretch", height=400)
+# ---------- VÆLG KUN DE KOLONNER VI VIL HAVE ----------
+cols_to_use = list(mapping.keys()) + ["display_name"]
 
-    with tab2:
-        st.dataframe(comp, width="stretch", height=400)
+comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
 
-    with tab3:
-        st.dataframe(comp, width="stretch", height=400)
+# rename
+comp = comp.rename(columns=mapping)
 
-    with tab4:
-        if "Overflade klasse" in comp.index:
-            st.dataframe(comp.loc[["Overflade klasse"]], width="stretch")
+# transpose så egenskaber er rækker
+comp = comp.set_index("display_name").T
 
+# fjern tomme rækker
+comp = comp.dropna(how="all")
+
+# gør alt til string
+comp = comp.astype(str).replace("nan", "-")
+
+# ---------- TAB FUNKTION ----------
+def show_tab(rows):
+    rows_existing = [r for r in rows if r in comp.index]
+
+    if rows_existing:
+        st.dataframe(
+            comp.loc[rows_existing],
+            width="stretch",
+            height=400
+        )
+    else:
+        st.info("Ingen data")
+
+# ---------- TABS ----------
+tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
+
+with tab1:
+    show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
+
+with tab2:
+    show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
+
+with tab3:
+    show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
+
+with tab4:
+    show_tab(["Overflade"])
     # ---------- PDF ----------
     def download_image(url):
         try:
