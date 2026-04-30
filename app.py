@@ -121,7 +121,12 @@ def format_value(val):
         return f"{val:.2f}".rstrip("0").rstrip(".")
     return str(val)
 
-comp = comp.applymap(format_value)
+# sikkerhed: kun hvis comp er dataframe og ikke tom
+if isinstance(comp, pd.DataFrame) and not comp.empty:
+    comp = comp.applymap(format_value)
+else:
+    st.error("Data kunne ikke behandles korrekt (comp er tom eller ugyldig)")
+    st.stop()
 
 # ---------- UNITS ----------
 units = {
