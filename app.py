@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 st.image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true", width=150)
 st.title("System sammenligning")
+# 🔥 VIGTIG (gør appen bred)
+st.set_page_config(layout="wide")
 # 🎨 CSS (STEP 3)
 st.markdown("""
 <style>
