@@ -37,13 +37,17 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-df["display_name"] = df[name_col] + " (" + df[id_col] + ")"
+# display navn (brug både navn + id)
+df["display_name"] = df[name_col].astype(str) + " (" + df[id_col].astype(str) + ")"
 
+# ---------- SELECT ----------
 valg_display = st.multiselect("Vælg systemer", df["display_name"])
-valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
-# 🔴 KUN hvis der er valgt noget
-if len(valg_ids) > 0:
+if len(valg_display) == 0:
+    st.info("Vælg mindst ét system")
+else:
+
+    valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
     # ---------- BILLEDER ----------
     st.subheader("Systemer")
@@ -79,20 +83,20 @@ if len(valg_ids) > 0:
         "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
     }
 
-    # ---------- DATA ----------
+    # ---------- SIKKER KOLONNEVALG ----------
     existing_cols = [col for col in mapping.keys() if col in df.columns]
     cols_to_use = existing_cols + ["display_name"]
 
     comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
 
+    # rename kun eksisterende
     mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
     comp = comp.rename(columns=mapping_filtered)
 
-    # ---------- DECIMALER ----------
+    # ---------- NUMERISK FIX (ROBUST) ----------
     for col in comp.columns:
         if col != "display_name":
-            if pd.api.types.is_numeric_dtype(comp[col]):
-                comp[col] = comp[col].round(2)
+            comp[col] = pd.to_numeric(comp[col], errors="coerce")
 
     # ---------- TRANSPOSE ----------
     comp = comp.set_index("display_name").T
@@ -107,7 +111,6 @@ if len(valg_ids) > 0:
         return str(val)
 
     comp = comp.applymap(format_value)
-    comp = comp.fillna("-")
 
     # ---------- UNITS ----------
     units = {
@@ -127,7 +130,7 @@ if len(valg_ids) > 0:
                 lambda x: x + units[row] if x != "-" else x
             )
 
-    # ---------- TAB ----------
+    # ---------- TAB FUNKTION ----------
     def show_tab(rows):
         rows_existing = [r for r in rows if r in comp.index]
 
@@ -140,6 +143,7 @@ if len(valg_ids) > 0:
         else:
             st.info("Ingen data")
 
+    # ---------- TABS ----------
     tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
     with tab1:
@@ -161,7 +165,7 @@ if len(valg_ids) > 0:
         except:
             return None
 
-    def lav_pdf(comp):
+    def lav_pdf(comp, valg_display):
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -196,7 +200,7 @@ if len(valg_ids) > 0:
 
     st.download_button(
         "📄 Download PDF",
-        lav_pdf(comp),
+        lav_pdf(comp, valg_display),
         file_name="system_sammenligning.pdf",
         mime="application/pdf"
     )
