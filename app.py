@@ -95,8 +95,16 @@ comp = comp.rename(columns=mapping_filtered)
 comp = comp.set_index("display_name").T
 comp = comp.dropna(how="all")
 
-# ---------- SIMPEL FORMAT ----------
-comp = comp.astype(str).replace("nan", "-")
+# ---------- FORMAT (ROBUST) ----------
+def format_value(val):
+    if pd.isna(val):
+        return "-"
+    val_str = str(val)
+    if val_str.lower() == "nan":
+        return "-"
+    return val_str
+
+comp = comp.applymap(format_value)
 
 # ---------- DISPLAY MED UNITS (SAFE) ----------
 comp_display = comp.copy()
