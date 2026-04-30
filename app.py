@@ -98,14 +98,39 @@ comp = comp.dropna(how="all")
 # ---------- SIMPEL FORMAT ----------
 comp = comp.astype(str).replace("nan", "-")
 
-# ---------- TABS ----------
+# ---------- DISPLAY MED UNITS (SAFE) ----------
+comp_display = comp.copy()
+
+units = {
+    "GWP": " kg CO₂e",
+    "Rw": " dB",
+    "C50": " dB",
+    "Vægt": " kg/m²",
+    "Højde": " mm",
+    "Tykkelse": " mm",
+    "Stolpeafstand": " mm",
+    "Isolering tykkelse": " mm"
+}
+
+for row in comp_display.index:
+    if row in units:
+        comp_display.loc[row] = comp_display.loc[row].apply(
+            lambda x: x + units[row] if x != "-" else x
+        )
+
+# ---------- TAB FUNKTION ----------
 def show_tab(rows):
-    rows_existing = [r for r in rows if r in comp.index]
+    rows_existing = [r for r in rows if r in comp_display.index]
     if rows_existing:
-        st.dataframe(comp.loc[rows_existing], use_container_width=True)
+        st.dataframe(
+            comp_display.loc[rows_existing],
+            use_container_width=True,
+            height=400
+        )
     else:
         st.info("Ingen data")
 
+# ---------- TABS ----------
 tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
 with tab1:
@@ -162,7 +187,7 @@ def lav_pdf(comp):
 
 st.download_button(
     "📄 Download PDF",
-    lav_pdf(comp),
+    lav_pdf(comp_display),
     file_name="system_sammenligning.pdf",
     mime="application/pdf"
 )
