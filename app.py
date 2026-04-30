@@ -110,17 +110,16 @@ def format_value(val):
 comp = comp.applymap(format_value)
 comp = comp.fillna("-")
 
-    # ---------- UNITS ----------
-    units = {
-        "GWP": " kg CO₂e",
-        "Rw": " dB",
-        "C50": " dB",
-        "Vægt": " kg/m²",
-        "Højde": " mm",
-        "Tykkelse": " mm",
-        "Stolpeafstand": " mm",
-        "Isolering tykkelse": " mm"
-    }
+units = {
+    "GWP": " kg CO₂e",
+    "Rw": " dB",
+    "C50": " dB",
+    "Vægt": " kg/m²",
+    "Højde": " mm",
+    "Tykkelse": " mm",
+    "Stolpeafstand": " mm",
+    "Isolering tykkelse": " mm"
+}
 
     for row in comp.index:
         if row in units:
