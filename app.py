@@ -18,65 +18,74 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# mapping
+# ----------- KOLONNER -----------
+name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
+id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
+image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
+
+# ----------- MAPPING (ALLE EGENSKABER) -----------
 mapping = {
+    "Grid_sys_desc_pdm_gpdm": "Skelet type",
+    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet type",
+    "Ceilings_Grid_sys_desc_pdm_gpdm": "Underlagstype",
+
+    "Cladding_Layers_sys_td_pdm_gpdm": "Antal pladelag pr. side",
+    "Cladding_sys_desc_pdm_gpdm": "Beklædningstype",
+    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Samlet vægtykkelse",
+
     "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
+
     "Insulation_Material_sys_desc_pdm_gpdm": "Isoleringsmateriale",
     "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isoleringstykkelse",
+
     "Partition_Height_sys_met_td_pdm_gpdm": "Maksimal væghøjde",
     "Profile_sys_desc_pdm_gpdm": "Profil type",
+
     "Screw_Tight_sys_desc_pdm_gpdm": "Skruefast",
+
     "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "Luftlydisolation - dB [R'w] C50",
+
+    # 👉 BEVIDST kun én Rw (numeric prioriteres)
     "Sound_Reduction_Index_sys_td_pdm_gpdm": "Lydklasse (R’w)",
+
     "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpe afstand c/c",
-    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt pr. m²",
-    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet type"
+    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Størst mulig overfladeniveau",
+
+    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt pr. m²"
 }
 
-# enheder
+# ----------- ENHEDER -----------
 units = {
     "Globalt opvarmningspotentiale": "kg CO₂e",
     "Isoleringstykkelse": "mm",
     "Maksimal væghøjde": "mm",
     "Stolpe afstand c/c": "mm",
+    "Samlet vægtykkelse": "mm",
     "Vægt pr. m²": "kg/m²",
     "Luftlydisolation - dB [R'w] C50": "dB",
     "Lydklasse (R’w)": "dB"
 }
 
-# kolonner
-name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
-id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
-image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
-
-# ---------- LAV DISPLAY LISTE ----------
+# ----------- DROPDOWN -----------
 df_valid = df[[id_col, name_col]].dropna()
-
-# fjern "Optional"
 df_valid = df_valid[df_valid[name_col] != "Optional"]
 
-# lav label: "Navn (ID)"
 df_valid["display"] = df_valid[name_col] + " (" + df_valid[id_col] + ")"
-
-# fjern dubletter på ID (vigtigt)
 df_valid = df_valid.drop_duplicates(subset=[id_col])
 
-# dropdown
 valg_display = st.multiselect(
     "Vælg systemer",
     sorted(df_valid["display"])
 )
 
-# map tilbage til ID
 valgte_ids = df_valid[df_valid["display"].isin(valg_display)][id_col]
 
-# ---------- VIS BILLEDER ----------
+# ----------- BILLEDER -----------
 if len(valgte_ids) > 0:
     st.subheader("Systemer")
 
     selected = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
-
     cols_layout = st.columns(len(selected))
 
     for i, (_, row) in enumerate(selected.iterrows()):
@@ -91,7 +100,7 @@ if len(valgte_ids) > 0:
                 unsafe_allow_html=True
             )
 
-# ---------- VIS DATA ----------
+# ----------- DATA -----------
 if len(valgte_ids) > 0:
     comp = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
 
@@ -102,6 +111,9 @@ if len(valgte_ids) > 0:
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
 
     comp = comp.set_index(name_col).T
+
+    # fjern duplicate rækker (meget vigtigt!)
+    comp = comp[~comp.index.duplicated(keep="first")]
 
     comp = comp.fillna("-")
 
