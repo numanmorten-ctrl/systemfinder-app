@@ -6,7 +6,7 @@ st.title("System sammenligning")
 # læs Excel
 df = pd.read_excel("10_list.xlsx", header=1)
 
-# gør kolonnenavne unikke
+# gør kolonner unikke
 cols = []
 counts = {}
 for col in df.columns:
@@ -23,7 +23,7 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ---------- MAPPING ----------
+# mapping
 mapping = {
     "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
     "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
@@ -45,7 +45,7 @@ mapping = {
     "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
 }
 
-# ---------- ENHEDER ----------
+# enheder
 units = {
     "GWP": "kg CO₂e",
     "Højde": "mm",
@@ -57,21 +57,16 @@ units = {
     "C50": "dB"
 }
 
-# ---------- DROPDOWN ----------
+# dropdown
 df_valid = df[[id_col, name_col]].dropna()
 df_valid = df_valid[df_valid[name_col] != "Optional"]
-
 df_valid["display"] = df_valid[name_col] + " (" + df_valid[id_col] + ")"
 df_valid = df_valid.drop_duplicates(subset=[id_col])
 
-valg_display = st.multiselect(
-    "Vælg systemer",
-    sorted(df_valid["display"])
-)
-
+valg_display = st.multiselect("Vælg systemer", sorted(df_valid["display"]))
 valgte_ids = df_valid[df_valid["display"].isin(valg_display)][id_col]
 
-# ---------- BILLEDER ----------
+# billeder
 if len(valgte_ids) > 0:
     selected = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
     cols_layout = st.columns(len(selected))
@@ -79,19 +74,17 @@ if len(valgte_ids) > 0:
     for i, (_, row) in enumerate(selected.iterrows()):
         with cols_layout[i]:
             img = row.get(image_col, None)
-
             if pd.notna(img):
                 st.image(img, width=120)
-
             st.markdown(f"<div style='text-align:center'>{row[name_col]}</div>", unsafe_allow_html=True)
 
-# ---------- DATA ----------
+# data
 if len(valgte_ids) > 0:
     comp = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
 
     available_cols = [col for col in mapping.keys() if col in comp.columns]
-
     comp = comp[[name_col] + available_cols]
+
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
     comp = comp.set_index(name_col).T
     comp = comp[~comp.index.duplicated(keep="first")]
@@ -113,14 +106,21 @@ if len(valgte_ids) > 0:
     # ---------- TABS ----------
     tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Akustik"])
 
+    def show_tab(rows):
+        existing = [r for r in rows if r in comp.index]
+        if existing:
+            st.dataframe(comp.loc[existing], use_container_width=True)
+        else:
+            st.info("Ingen data")
+
     with tab1:
-        st.dataframe(comp.loc[["GWP", "Rw", "Brand", "Vægt"]], use_container_width=True)
+        show_tab(["GWP", "Rw", "Brand", "Vægt"])
 
     with tab2:
-        st.dataframe(comp.loc[["Højde", "Tykkelse", "Stolpeafstand", "Skelet"]], use_container_width=True)
+        show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
 
     with tab3:
-        st.dataframe(comp.loc[["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"]], use_container_width=True)
+        show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
 
     with tab4:
-        st.dataframe(comp.loc[["C50", "Overflade"]], use_container_width=True)
+        show_tab(["C50", "Overflade"])
