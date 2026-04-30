@@ -175,7 +175,19 @@ def lav_pdf(comp):
     elements.append(Spacer(1, 10))
     elements.append(Paragraph("System sammenligning", styles['Title']))
     elements.append(Spacer(1, 10))
-
+# ---------- SYSTEM BILLEDER ----------
+for system in valg_display:
+    try:
+        row = df[df["display_name"] == system]
+        if not row.empty:
+            img_url = row[image_col].values[0]
+            img = download_image(img_url)
+            if img:
+                elements.append(Image(img, width=120, height=120))
+                elements.append(Paragraph(system, styles['Normal']))
+                elements.append(Spacer(1, 10))
+    except:
+        pass
     data = [["Egenskab"] + list(comp.columns)]
 
     for index, row in comp.iterrows():
