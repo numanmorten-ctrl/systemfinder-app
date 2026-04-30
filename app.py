@@ -82,7 +82,7 @@ mapping = {
     "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
 }
 
-# ---------- BUILD DATA (ROBUST) ----------
+# ---------- BUILD DATA ----------
 comp = df[df[id_col].isin(valg_ids)].copy()
 
 existing_cols = [col for col in mapping.keys() if col in comp.columns]
@@ -92,10 +92,9 @@ if len(existing_cols) == 0:
     st.stop()
 
 cols_to_use = existing_cols + ["display_name"]
-
 comp = comp[cols_to_use]
 
-# rename sikkert
+# rename
 mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
 comp = comp.rename(columns=mapping_filtered)
 
@@ -115,18 +114,14 @@ comp = comp.dropna(how="all")
 
 # ---------- FORMAT ----------
 def format_value(val):
-    if pd.isna(val):
+    if val is None or pd.isna(val):
         return "-"
-    if isinstance(val, float):
+    if isinstance(val, (int, float)):
         return f"{val:.2f}".rstrip("0").rstrip(".")
     return str(val)
 
-# sikkerhed: kun hvis comp er dataframe og ikke tom
-if isinstance(comp, pd.DataFrame) and not comp.empty:
-    comp = comp.applymap(format_value)
-else:
-    st.error("Data kunne ikke behandles korrekt (comp er tom eller ugyldig)")
-    st.stop()
+# 🔥 FIX: brug stack i stedet for applymap
+comp = comp.stack().map(format_value).unstack()
 
 # ---------- UNITS ----------
 units = {
