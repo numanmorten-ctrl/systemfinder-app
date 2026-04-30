@@ -37,10 +37,8 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ---------- DISPLAY NAME ----------
 df["display_name"] = df[name_col] + " (" + df[id_col] + ")"
 
-# ---------- SELECT ----------
 valg_display = st.multiselect("Vælg systemer", df["display_name"])
 valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
@@ -80,24 +78,36 @@ if len(valg_ids) > 0:
         "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
     }
 
-    # ---------- ROBUST KOLONNEVALG ----------
+    # ---------- SIKKER KOLONNEVALG ----------
     existing_cols = [col for col in mapping.keys() if col in df.columns]
     cols_to_use = existing_cols + ["display_name"]
 
     comp = df[df[id_col].isin(valg_ids)][cols_to_use].copy()
 
-    # rename kun eksisterende
+    # rename
     mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
     comp = comp.rename(columns=mapping_filtered)
 
-    # transpose
-    comp = comp.set_index("display_name").T
+    # ---------- FIX DECIMALER ----------
+    for col in comp.columns:
+        if col != "display_name":
+            comp[col] = pd.to_numeric(comp[col], errors="ignore")
 
-    # fjern tomme
+    comp = comp.round(2)
+
+    # ---------- TRANSPOSE ----------
+    comp = comp.set_index("display_name").T
     comp = comp.dropna(how="all")
 
-    # string + fix nan
-    comp = comp.astype(str).replace("nan", "-")
+    # ---------- FORMATTERING ----------
+    def format_value(val):
+        if pd.isna(val):
+            return "-"
+        if isinstance(val, float):
+            return f"{val:.2f}".rstrip("0").rstrip(".")
+        return str(val)
+
+    comp = comp.applymap(format_value)
 
     # ---------- UNITS ----------
     units = {
@@ -113,9 +123,9 @@ if len(valg_ids) > 0:
 
     for row in comp.index:
         if row in units:
-            comp.loc[row] = comp.loc[row] + units[row]
+            comp.loc[row] = comp.loc[row].apply(lambda x: x + units[row] if x != "-" else x)
 
-    # ---------- TAB FUNCTION ----------
+    # ---------- TAB ----------
     def show_tab(rows):
         rows_existing = [r for r in rows if r in comp.index]
 
@@ -128,7 +138,6 @@ if len(valg_ids) > 0:
         else:
             st.info("Ingen data")
 
-    # ---------- TABS ----------
     tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
     with tab1:
@@ -146,8 +155,7 @@ if len(valg_ids) > 0:
     # ---------- PDF ----------
     def download_image(url):
         try:
-            response = requests.get(url)
-            return io.BytesIO(response.content)
+            return io.BytesIO(requests.get(url).content)
         except:
             return None
 
@@ -158,9 +166,7 @@ if len(valg_ids) > 0:
         styles = getSampleStyleSheet()
         elements = []
 
-        # LOGO
-        logo_url = "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
-        logo = download_image(logo_url)
+        logo = download_image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true")
         if logo:
             elements.append(Image(logo, width=120, height=50))
 
@@ -168,25 +174,12 @@ if len(valg_ids) > 0:
         elements.append(Paragraph("System sammenligning", styles['Title']))
         elements.append(Spacer(1, 10))
 
-        # BILLEDER
-        for system in valg_display:
-            rows = df[df["display_name"] == system]
-            if not rows.empty:
-                img_url = rows[image_col].values[0]
-                img = download_image(img_url)
-                if img:
-                    elements.append(Image(img, width=100, height=100))
-                    elements.append(Paragraph(system, styles['Normal']))
-                    elements.append(Spacer(1, 10))
-
-        # TABLE
         data = [["Egenskab"] + list(comp.columns)]
 
         for index, row in comp.iterrows():
             data.append([index] + list(row))
 
         table = Table(data)
-
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -199,11 +192,9 @@ if len(valg_ids) > 0:
         buffer.seek(0)
         return buffer
 
-    pdf = lav_pdf(comp, valg_display)
-
     st.download_button(
         "📄 Download PDF",
-        pdf,
+        lav_pdf(comp, valg_display),
         file_name="system_sammenligning.pdf",
         mime="application/pdf"
     )
