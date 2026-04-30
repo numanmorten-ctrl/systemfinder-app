@@ -123,7 +123,7 @@ def format_value(val):
 # 🔥 FIX: brug stack i stedet for applymap
 comp = comp.stack().map(format_value).unstack()
 
-# ---------- UNITS (SAFE FIX) ----------
+# ---------- UNITS (100% SAFE VERSION) ----------
 units = {
     "GWP": " kg CO₂e",
     "Rw": " dB",
@@ -137,10 +137,13 @@ units = {
 
 for row in comp.index:
     if row in units:
-        comp.loc[row] = comp.loc[row].astype(str).where(
-            comp.loc[row] == "-",
-            comp.loc[row].astype(str) + units[row]
-        )
+        new_values = []
+        for val in comp.loc[row]:
+            if val == "-" or val is None:
+                new_values.append(val)
+            else:
+                new_values.append(f"{val}{units[row]}")
+        comp.loc[row] = new_values
 
 # ---------- TAB FUNKTION ----------
 def show_tab(rows):
