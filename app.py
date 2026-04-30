@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Knauf_logo.svg/2560px-Knauf_logo.svg.png", width=150)
+st.image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true", width=150)
 st.title("System sammenligning")
 
 # læs Excel
