@@ -18,56 +18,46 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# ----------- KOLONNER -----------
+# kolonner
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ----------- MAPPING (ALLE EGENSKABER) -----------
+# ---------- MAPPING ----------
 mapping = {
-    "Grid_sys_desc_pdm_gpdm": "Skelet type",
-    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet type",
-    "Ceilings_Grid_sys_desc_pdm_gpdm": "Underlagstype",
+    "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
+    "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
+    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
+    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
 
-    "Cladding_Layers_sys_td_pdm_gpdm": "Antal pladelag pr. side",
-    "Cladding_sys_desc_pdm_gpdm": "Beklædningstype",
-    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Samlet vægtykkelse",
+    "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
+    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
+    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
+    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
 
-    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
-    "Global_Warming_Potential_sys_met_td_pdm_gpdm": "Globalt opvarmningspotentiale",
+    "Cladding_sys_desc_pdm_gpdm": "Beklædning",
+    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
+    "Profile_sys_desc_pdm_gpdm": "Profil",
+    "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
+    "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
 
-    "Insulation_Material_sys_desc_pdm_gpdm": "Isoleringsmateriale",
-    "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isoleringstykkelse",
-
-    "Partition_Height_sys_met_td_pdm_gpdm": "Maksimal væghøjde",
-    "Profile_sys_desc_pdm_gpdm": "Profil type",
-
-    "Screw_Tight_sys_desc_pdm_gpdm": "Skruefast",
-
-    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "Luftlydisolation - dB [R'w] C50",
-
-    # 👉 BEVIDST kun én Rw (numeric prioriteres)
-    "Sound_Reduction_Index_sys_td_pdm_gpdm": "Lydklasse (R’w)",
-
-    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpe afstand c/c",
-    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Størst mulig overfladeniveau",
-
-    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt pr. m²"
+    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
+    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
 }
 
-# ----------- ENHEDER -----------
+# ---------- ENHEDER ----------
 units = {
-    "Globalt opvarmningspotentiale": "kg CO₂e",
-    "Isoleringstykkelse": "mm",
-    "Maksimal væghøjde": "mm",
-    "Stolpe afstand c/c": "mm",
-    "Samlet vægtykkelse": "mm",
-    "Vægt pr. m²": "kg/m²",
-    "Luftlydisolation - dB [R'w] C50": "dB",
-    "Lydklasse (R’w)": "dB"
+    "GWP": "kg CO₂e",
+    "Højde": "mm",
+    "Tykkelse": "mm",
+    "Stolpeafstand": "mm",
+    "Isolering tykkelse": "mm",
+    "Vægt": "kg/m²",
+    "Rw": "dB",
+    "C50": "dB"
 }
 
-# ----------- DROPDOWN -----------
+# ---------- DROPDOWN ----------
 df_valid = df[[id_col, name_col]].dropna()
 df_valid = df_valid[df_valid[name_col] != "Optional"]
 
@@ -81,10 +71,8 @@ valg_display = st.multiselect(
 
 valgte_ids = df_valid[df_valid["display"].isin(valg_display)][id_col]
 
-# ----------- BILLEDER -----------
+# ---------- BILLEDER ----------
 if len(valgte_ids) > 0:
-    st.subheader("Systemer")
-
     selected = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
     cols_layout = st.columns(len(selected))
 
@@ -93,26 +81,19 @@ if len(valgte_ids) > 0:
             img = row.get(image_col, None)
 
             if pd.notna(img):
-                st.image(img, width=150)
+                st.image(img, width=120)
 
-            st.markdown(
-                f"<div style='text-align:center'>{row[name_col]}</div>",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"<div style='text-align:center'>{row[name_col]}</div>", unsafe_allow_html=True)
 
-# ----------- DATA -----------
+# ---------- DATA ----------
 if len(valgte_ids) > 0:
     comp = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
 
     available_cols = [col for col in mapping.keys() if col in comp.columns]
 
     comp = comp[[name_col] + available_cols]
-
     comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
-
     comp = comp.set_index(name_col).T
-
-    # fjern duplicate rækker (meget vigtigt!)
     comp = comp[~comp.index.duplicated(keep="first")]
 
     comp = comp.fillna("-")
@@ -129,4 +110,17 @@ if len(valgte_ids) > 0:
                 lambda x: f"{x} {unit}" if x != "-" else x
             )
 
-    st.dataframe(comp, height=500, use_container_width=True)
+    # ---------- TABS ----------
+    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Akustik"])
+
+    with tab1:
+        st.dataframe(comp.loc[["GWP", "Rw", "Brand", "Vægt"]], use_container_width=True)
+
+    with tab2:
+        st.dataframe(comp.loc[["Højde", "Tykkelse", "Stolpeafstand", "Skelet"]], use_container_width=True)
+
+    with tab3:
+        st.dataframe(comp.loc[["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"]], use_container_width=True)
+
+    with tab4:
+        st.dataframe(comp.loc[["C50", "Overflade"]], use_container_width=True)
