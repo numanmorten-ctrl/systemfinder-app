@@ -1,34 +1,38 @@
 import streamlit as st
 import pandas as pd
-st.image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true", width=150)
-st.title("System sammenligning")
-# 🔥 VIGTIG (gør appen bred)
+import io
+import requests
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+
+# ---------- CONFIG ----------
 st.set_page_config(layout="wide")
-# 🎨 CSS (STEP 3)
+
+# ---------- LOGO ----------
+st.image(
+    "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true",
+    width=150
+)
+
+st.title("System sammenligning")
+
+# ---------- CSS ----------
 st.markdown("""
 <style>
-
-/* ---------- GENEREL ---------- */
 html, body {
     font-family: 'Segoe UI', sans-serif;
 }
 
-/* ---------- TITEL ---------- */
 h1 {
     font-weight: 600;
-    margin-bottom: 10px;
-}
-
-/* ---------- TABS ---------- */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 10px;
 }
 
 .stTabs [data-baseweb="tab"] {
     background-color: #EDEFF2;
     border-radius: 6px;
     padding: 8px 16px;
-    color: #1F2A37;
 }
 
 .stTabs [aria-selected="true"] {
@@ -36,34 +40,14 @@ h1 {
     color: white !important;
 }
 
-/* ---------- TABLE ---------- */
 .stDataFrame {
     border: 1px solid #E1E5EA;
     border-radius: 8px;
-    overflow: hidden;
 }
-
-/* ---------- DROPDOWN ---------- */
-[data-baseweb="select"] {
-    background-color: white;
-    border: 1px solid #D0D5DD;
-    border-radius: 6px;
-}
-
-/* ---------- BILLEDER ---------- */
-img {
-    border-radius: 6px;
-}
-
-/* ---------- LABELS ---------- */
-label {
-    font-weight: 500;
-    color: #1F2A37;
-}
-
 </style>
 """, unsafe_allow_html=True)
-# læs Excel
+
+# ---------- LOAD DATA ----------
 df = pd.read_excel("10_list.xlsx", header=1)
 
 # gør kolonner unikke
@@ -78,111 +62,136 @@ for col in df.columns:
         cols.append(col)
 df.columns = cols
 
-# kolonner
+# ---------- KOLONNER ----------
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# mapping
-mapping = {
-    "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
-    "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
-    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
-    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
+# ---------- VÆLG SYSTEMER ----------
+valg = st.multiselect("Vælg systemer", df[name_col])
 
-    "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
-    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
-    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
-    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
+if valg:
 
-    "Cladding_sys_desc_pdm_gpdm": "Beklædning",
-    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag pr. side",
-    "Profile_sys_desc_pdm_gpdm": "Profil",
-    "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
-    "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
+    comp = df[df[name_col].isin(valg)].copy()
 
-    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
-    "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade"
-}
-
-# enheder
-units = {
-    "GWP": "kg CO₂e",
-    "Højde": "mm",
-    "Tykkelse": "mm",
-    "Stolpeafstand": "mm",
-    "Isolering tykkelse": "mm",
-    "Vægt": "kg/m²",
-    "Rw": "dB",
-    "C50": "dB"
-}
-
-# dropdown
-df_valid = df[[id_col, name_col]].dropna()
-df_valid = df_valid[df_valid[name_col] != "Optional"]
-df_valid["display"] = df_valid[name_col] + " (" + df_valid[id_col] + ")"
-df_valid = df_valid.drop_duplicates(subset=[id_col])
-
-valg_display = st.multiselect("Vælg systemer", sorted(df_valid["display"]))
-valgte_ids = df_valid[df_valid["display"].isin(valg_display)][id_col]
-
-# billeder
-if len(valgte_ids) > 0:
-    selected = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
-    cols_layout = st.columns(len(selected))
-
-    for i, (_, row) in enumerate(selected.iterrows()):
-        with cols_layout[i]:
-            img = row.get(image_col, None)
-            if pd.notna(img):
-                st.image(img, width=120)
-            st.markdown(f"<div style='text-align:center'>{row[name_col]}</div>", unsafe_allow_html=True)
-
-# data
-if len(valgte_ids) > 0:
-    comp = df[df[id_col].isin(valgte_ids)].drop_duplicates(subset=[id_col])
-
-    available_cols = [col for col in mapping.keys() if col in comp.columns]
-    comp = comp[[name_col] + available_cols]
-
-    comp = comp.rename(columns={k: v for k, v in mapping.items() if k in comp.columns})
+    # brug navn som index
     comp = comp.set_index(name_col).T
-    comp = comp[~comp.index.duplicated(keep="first")]
 
-    comp = comp.fillna("-")
+    # fjern dubletter (vigtigt for Streamlit)
+    comp = comp.loc[~comp.index.duplicated()]
 
-    comp = comp.apply(lambda col: col.map(
-        lambda x: round(x, 2) if isinstance(x, (int, float)) else x
-    ))
+    # ---------- BILLEDER ----------
+    st.subheader("Systemer")
+    cols_img = st.columns(len(valg))
 
-    # enheder
-    for row in comp.index:
-        if row in units:
-            unit = units[row]
-            comp.loc[row] = comp.loc[row].apply(
-                lambda x: f"{x} {unit}" if x != "-" else x
-            )
+    for i, system in enumerate(valg):
+        try:
+            img_url = df[df[name_col] == system][image_col].values[0]
+            if isinstance(img_url, str) and img_url.startswith("http"):
+                cols_img[i].image(img_url, width=200)
+                cols_img[i].caption(system)
+        except:
+            pass
 
     # ---------- TABS ----------
     tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
-    def show_tab(rows):
-        existing = [r for r in rows if r in comp.index]
-        if existing:
-            st.dataframe(comp.loc[existing], use_container_width=True)
-        else:
-            st.info("Ingen data")
+    # ---------- MAPPING ----------
+    mapping = {
+        "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP (kg CO2e)",
+        "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw (dB)",
+        "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50 (dB)",
+        "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brandklasse",
+        "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt (kg/m²)",
+        "Partition_Height_sys_met_td_pdm_gpdm": "Højde (mm)",
+        "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand (mm)",
+        "Insulation_Thickness_sys_met_td_pdm_gpdm": "Tykkelse (mm)",
+        "Profile_sys_desc_pdm_gpdm": "Profil",
+        "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
+        "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade klasse"
+    }
 
-    # 🔥 C50 flyttet til Basis
+    comp = comp.rename(index=mapping)
+
+    # ---------- CLEAN ----------
+    comp = comp.fillna("-")
+
+    # ---------- TABS CONTENT ----------
     with tab1:
-        show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
+        st.dataframe(comp, use_container_width=True, height=400)
 
     with tab2:
-        show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
+        st.dataframe(comp, use_container_width=True, height=400)
 
     with tab3:
-        show_tab(["Beklædning", "Pladelag pr. side", "Profil", "Isolering", "Isolering tykkelse"])
+        st.dataframe(comp, use_container_width=True, height=400)
 
-    # 🔥 Kun overflade
     with tab4:
-        show_tab(["Overflade"])
+        st.dataframe(comp.loc[["Overflade klasse"]], use_container_width=True)
+
+    # ---------- PDF GENERATOR ----------
+    def download_image(url):
+        try:
+            response = requests.get(url)
+            return io.BytesIO(response.content)
+        except:
+            return None
+
+    def lav_pdf(comp, valg):
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # LOGO
+        logo_url = "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
+        logo = download_image(logo_url)
+        if logo:
+            elements.append(Image(logo, width=120, height=50))
+
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("System sammenligning", styles['Title']))
+        elements.append(Spacer(1, 10))
+
+        # SYSTEM BILLEDER
+        for system in valg:
+            try:
+                img_url = df[df[name_col] == system][image_col].values[0]
+                img = download_image(img_url)
+                if img:
+                    elements.append(Image(img, width=120, height=120))
+                    elements.append(Paragraph(system, styles['Normal']))
+                    elements.append(Spacer(1, 10))
+            except:
+                pass
+
+        # TABLE
+        data = [["Egenskab"] + list(comp.columns)]
+
+        for index, row in comp.iterrows():
+            data.append([index] + list(row))
+
+        table = Table(data)
+
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+
+        elements.append(table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+
+    # ---------- DOWNLOAD ----------
+    pdf = lav_pdf(comp, valg)
+
+    st.download_button(
+        "📄 Download PDF",
+        pdf,
+        file_name="system_sammenligning.pdf",
+        mime="application/pdf"
+    )
