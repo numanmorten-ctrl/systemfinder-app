@@ -162,64 +162,63 @@ def download_image(url):
         return None
 
 def lav_pdf(comp):
+
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
 
     styles = getSampleStyleSheet()
     elements = []
 
-    logo = download_image("https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true")
-    if logo:
-        elements.append(Image(logo, width=120, height=50))
-
-    elements.append(Spacer(1, 10))
     elements.append(Paragraph("System sammenligning", styles['Title']))
     elements.append(Spacer(1, 10))
-# ---------- SYSTEM BILLEDER I RÆKKE ----------
 
-image_row = []
+    # ---------- BILLEDER ----------
+    image_row = []
 
-for system in valg_display:
-    try:
-        row = df[df["display_name"] == system]
-        if not row.empty:
-            img_url = row[image_col].values[0]
-            img = download_image(img_url)
+    for system in valg_display:
+        try:
+            row = df[df["display_name"] == system]
+            if not row.empty:
+                img_url = row[image_col].values[0]
+                img = download_image(img_url)
 
-            if img:
-                cell = Table([
-                    [Image(img, width=100, height=100)],
-                    [Paragraph(system, styles['Normal'])]
-                ])
-                image_row.append(cell)
+                if img:
+                    cell = Table([
+                        [Image(img, width=100, height=100)],
+                        [Paragraph(system, styles['Normal'])]
+                    ])
+                    image_row.append(cell)
 
-    except Exception as e:
-        print(e)
+        except Exception as e:
+            print(e)
 
-if image_row:
-    img_table = Table([image_row], hAlign='CENTER')
-    elements.append(img_table)
-    elements.append(Spacer(1, 15))
-    
+    if image_row:
+        img_table = Table([image_row], hAlign='CENTER')
+        elements.append(img_table)
+        elements.append(Spacer(1, 15))
+
+    # ---------- DATA ----------
     data = [["Egenskab"] + list(comp.columns)]
 
     for index, row in comp.iterrows():
         data.append([index] + list(row))
 
-col_widths = [120] + [180] * (len(comp.columns))
-table = Table(data, colWidths=col_widths)
+    col_widths = [120] + [180] * len(comp.columns)
 
-table.setStyle(TableStyle([
-    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
-    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-]))
+    table = Table(data, colWidths=col_widths)
 
-elements.append(table)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
 
-doc.build(elements)
-buffer.seek(0)
-return buffer
+    elements.append(table)
+
+    # 🔴 DENNE SKAL VÆRE INDENFOR FUNKTIONEN
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
 st.download_button(
     "📄 Download PDF",
