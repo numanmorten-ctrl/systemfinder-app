@@ -7,7 +7,6 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 
-# ---------- CONFIG ----------
 st.set_page_config(layout="wide")
 
 # ---------- LOGO ----------
@@ -17,35 +16,6 @@ st.image(
 )
 
 st.title("System sammenligning")
-
-# ---------- CSS ----------
-st.markdown("""
-<style>
-html, body {
-    font-family: 'Segoe UI', sans-serif;
-}
-
-h1 {
-    font-weight: 600;
-}
-
-.stTabs [data-baseweb="tab"] {
-    background-color: #EDEFF2;
-    border-radius: 6px;
-    padding: 8px 16px;
-}
-
-.stTabs [aria-selected="true"] {
-    background-color: #005AA7 !important;
-    color: white !important;
-}
-
-.stDataFrame {
-    border: 1px solid #E1E5EA;
-    border-radius: 8px;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # ---------- LOAD DATA ----------
 df = pd.read_excel("10_list.xlsx", header=1)
@@ -67,34 +37,37 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ---------- VÆLG SYSTEMER ----------
-valg = st.multiselect("Vælg systemer", df[name_col])
+# ---------- FIX: DISPLAY LABEL ----------
+df["display_name"] = df[name_col] + "  (" + df[id_col] + ")"
 
-if valg:
+# ---------- SELECT ----------
+valg_display = st.multiselect("Vælg systemer", df["display_name"])
 
-    comp = df[df[name_col].isin(valg)].copy()
+# find tilbage til ID (det unikke)
+valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
-    # brug navn som index
-    comp = comp.set_index(name_col).T
+if len(valg_ids) > 0:
 
-    # fjern dubletter (vigtigt for Streamlit)
+    comp = df[df[id_col].isin(valg_ids)].copy()
+
+    # brug display navn som kolonne (så brugeren ser begge)
+    comp = comp.set_index("display_name").T
+
+    # fjern dubletter
     comp = comp.loc[~comp.index.duplicated()]
 
     # ---------- BILLEDER ----------
     st.subheader("Systemer")
-    cols_img = st.columns(len(valg))
+    cols_img = st.columns(len(valg_display))
 
-    for i, system in enumerate(valg):
+    for i, system in enumerate(valg_display):
         try:
-            img_url = df[df[name_col] == system][image_col].values[0]
+            img_url = df[df["display_name"] == system][image_col].values[0]
             if isinstance(img_url, str) and img_url.startswith("http"):
-                cols_img[i].image(img_url, width=200)
+                cols_img[i].image(img_url, width=180)
                 cols_img[i].caption(system)
         except:
             pass
-
-    # ---------- TABS ----------
-    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
     # ---------- MAPPING ----------
     mapping = {
@@ -114,22 +87,25 @@ if valg:
     comp = comp.rename(index=mapping)
 
     # ---------- CLEAN ----------
-    comp = comp.fillna("-")
+    comp = comp.astype(str).fillna("-")
 
-    # ---------- TABS CONTENT ----------
+    # ---------- TABS ----------
+    tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
+
     with tab1:
-        st.dataframe(comp, use_container_width=True, height=400)
+        st.dataframe(comp, width="stretch", height=400)
 
     with tab2:
-        st.dataframe(comp, use_container_width=True, height=400)
+        st.dataframe(comp, width="stretch", height=400)
 
     with tab3:
-        st.dataframe(comp, use_container_width=True, height=400)
+        st.dataframe(comp, width="stretch", height=400)
 
     with tab4:
-        st.dataframe(comp.loc[["Overflade klasse"]], use_container_width=True)
+        if "Overflade klasse" in comp.index:
+            st.dataframe(comp.loc[["Overflade klasse"]], width="stretch")
 
-    # ---------- PDF GENERATOR ----------
+    # ---------- PDF ----------
     def download_image(url):
         try:
             response = requests.get(url)
@@ -137,7 +113,7 @@ if valg:
         except:
             return None
 
-    def lav_pdf(comp, valg):
+    def lav_pdf(comp, valg_display):
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4)
 
@@ -154,13 +130,13 @@ if valg:
         elements.append(Paragraph("System sammenligning", styles['Title']))
         elements.append(Spacer(1, 10))
 
-        # SYSTEM BILLEDER
-        for system in valg:
+        # SYSTEMER + BILLEDER
+        for system in valg_display:
             try:
-                img_url = df[df[name_col] == system][image_col].values[0]
+                img_url = df[df["display_name"] == system][image_col].values[0]
                 img = download_image(img_url)
                 if img:
-                    elements.append(Image(img, width=120, height=120))
+                    elements.append(Image(img, width=100, height=100))
                     elements.append(Paragraph(system, styles['Normal']))
                     elements.append(Spacer(1, 10))
             except:
@@ -186,8 +162,7 @@ if valg:
         buffer.seek(0)
         return buffer
 
-    # ---------- DOWNLOAD ----------
-    pdf = lav_pdf(comp, valg)
+    pdf = lav_pdf(comp, valg_display)
 
     st.download_button(
         "📄 Download PDF",
