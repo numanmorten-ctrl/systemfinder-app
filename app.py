@@ -36,7 +36,7 @@ mapping = {
     "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
 
     "Cladding_sys_desc_pdm_gpdm": "Beklædning",
-    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
+    "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag pr. side",
     "Profile_sys_desc_pdm_gpdm": "Profil",
     "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
     "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
@@ -121,7 +121,7 @@ if len(valgte_ids) > 0:
         show_tab(["Højde", "Tykkelse", "Stolpeafstand", "Skelet"])
 
     with tab3:
-        show_tab(["Beklædning", "Pladelag", "Profil", "Isolering", "Isolering tykkelse"])
+        show_tab(["Beklædning", "Pladelag pr. side", "Profil", "Isolering", "Isolering tykkelse"])
 
     # 🔥 Kun overflade
     with tab4:
