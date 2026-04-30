@@ -4,7 +4,7 @@ import io
 import requests
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 
 st.set_page_config(layout="wide")
@@ -163,7 +163,7 @@ def download_image(url):
 
 def lav_pdf(comp):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
 
     styles = getSampleStyleSheet()
     elements = []
@@ -175,31 +175,46 @@ def lav_pdf(comp):
     elements.append(Spacer(1, 10))
     elements.append(Paragraph("System sammenligning", styles['Title']))
     elements.append(Spacer(1, 10))
-# ---------- SYSTEM BILLEDER ----------
+# ---------- SYSTEM BILLEDER I RÆKKE ----------
+
+image_row = []
+
 for system in valg_display:
     try:
         row = df[df["display_name"] == system]
         if not row.empty:
             img_url = row[image_col].values[0]
             img = download_image(img_url)
+
             if img:
-                elements.append(Image(img, width=120, height=120))
-                elements.append(Paragraph(system, styles['Normal']))
-                elements.append(Spacer(1, 10))
-    except:
-        pass
+                cell = Table([
+    [Image(img, width=100, height=100)],
+    [Paragraph(system, styles['Normal'])]
+])
+                image_row.append(cell)
+    except Exception as e:
+        print(e)
+
+if image_row:
+    img_table = Table([image_row], hAlign='CENTER')
+    elements.append(img_table)
+    elements.append(Spacer(1, 15))
+    
     data = [["Egenskab"] + list(comp.columns)]
 
     for index, row in comp.iterrows():
         data.append([index] + list(row))
 
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-    ]))
+col_widths = [120] + [180] * (len(comp.columns))
+table = Table(data, colWidths=col_widths)
 
+table = Table(data, colWidths=col_widths)
+
+table.setStyle(TableStyle([
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
+    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+]))
     elements.append(table)
 
     doc.build(elements)
