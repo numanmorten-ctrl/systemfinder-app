@@ -115,7 +115,7 @@ units = {
 for row in comp_display.index:
     if row in units:
         comp_display.loc[row] = comp_display.loc[row].apply(
-            lambda x: x + units[row] if x != "-" else x
+            lambda x: (str(x) + units[row]) if str(x) != "-" else "-"
         )
 
 # ---------- TAB FUNKTION ----------
