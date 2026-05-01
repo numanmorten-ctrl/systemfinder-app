@@ -96,7 +96,11 @@ comp = comp.set_index("display_name").T
 comp = comp.dropna(how="all")
 
 # ---------- SIMPEL FORMAT ----------
-comp = comp.applymap(lambda x: "-" if pd.isna(x) or str(x).lower() == "nan" else x)
+comp = comp.astype(object)
+for col in comp.columns:
+   comp[col] = comp[col].map(
+       lambda x: "-" if pd.isna(x) or str(x).lower() == "nan" else x
+   )
 
 # ---------- DISPLAY MED UNITS (SAFE) ----------
 comp_display = comp.copy()
