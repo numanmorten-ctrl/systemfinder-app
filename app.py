@@ -96,27 +96,26 @@ comp = comp.set_index("display_name").T
 comp = comp.dropna(how="all")
 
 # ---------- SIMPEL FORMAT ----------
-comp = comp.apply(lambda col: col.map(lambda x: "-" if pd.isna(x) else str(x)))
+comp = comp.applymap(lambda x: "-" if pd.isna(x) or str(x).lower() == "nan" else x)
 
 # ---------- DISPLAY MED UNITS (SAFE) ----------
 comp_display = comp.copy()
 
 units = {
-    "GWP": " kg CO₂e",
-    "Rw": " dB",
-    "C50": " dB",
-    "Vægt": " kg/m²",
-    "Højde": " mm",
-    "Tykkelse": " mm",
-    "Stolpeafstand": " mm",
-    "Isolering tykkelse": " mm"
+   "GWP": " kg CO₂e",
+   "Rw": " dB",
+   "C50": " dB",
+   "Vægt": " kg/m²",
+   "Højde": " mm",
+   "Tykkelse": " mm",
+   "Stolpeafstand": " mm",
+   "Isolering tykkelse": " mm"
 }
-
 for row in comp_display.index:
-    if row in units:
-        comp_display.loc[row] = comp_display.loc[row].map(
-            lambda x: f"{x}{units[row]}" if x != "-" else "-"
-        )
+   if row in units:
+       comp_display.loc[row] = comp_display.loc[row].map(
+           lambda x: f"{x}{units[row]}" if x != "-" else "-"
+       )
 
 # ---------- TAB FUNKTION ----------
 def show_tab(rows):
