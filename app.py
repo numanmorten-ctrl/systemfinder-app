@@ -48,16 +48,21 @@ if not valg_display:
 valg_ids = df[df["display_name"].isin(valg_display)][id_col]
 
 # ---------- BILLEDER ----------
-st.subheader("Systemer")
-cols_img = st.columns(len(valg_display))
-
-for i, system in enumerate(valg_display):
-    rows = df[df["display_name"] == system]
-    if not rows.empty:
-        img_url = rows[image_col].values[0]
-        if isinstance(img_url, str) and img_url.startswith("http"):
-            cols_img[i].image(img_url, width=180)
-            cols_img[i].caption(system)
+for system in valg_display:
+   try:
+       row = df[df["display_name"] == system]
+       if not row.empty:
+           img_url = row[image_col].values[0]
+           img = download_image(img_url)
+           if img:
+               local_name = row[name_col].values[0]
+               cell = Table([
+                   [Image(img, width=100, height=100)],
+                   [Paragraph(str(local_name), styles['Normal'])]
+               ])
+               image_row.append(cell)
+   except Exception as e:
+       print(e)
 
 # ---------- MAPPING ----------
 mapping = {
@@ -97,10 +102,14 @@ comp = comp.dropna(how="all")
 
 # ---------- SIMPEL FORMAT ----------
 comp = comp.astype(object)
+def format_value(x):
+   if pd.isna(x) or str(x).lower() == "nan":
+       return "-"
+   if isinstance(x, float):
+       return f"{x:.2f}".rstrip("0").rstrip(".")
+   return x
 for col in comp.columns:
-   comp[col] = comp[col].map(
-       lambda x: "-" if pd.isna(x) or str(x).lower() == "nan" else x
-   )
+   comp[col] = comp[col].map(format_value)
 
 # ---------- DISPLAY MED UNITS (SAFE) ----------
 comp_display = comp.copy()
@@ -188,7 +197,8 @@ def lav_pdf(comp):
                 if img:
                     cell = Table([
                         [Image(img, width=100, height=100)],
-                        [Paragraph(system, styles['Normal'])]
+                        [local_name = row[name_col].values[0]
+                        Paragraph(str(local_name), styles['Normal'])]
                     ])
                     image_row.append(cell)
 
