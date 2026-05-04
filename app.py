@@ -207,6 +207,7 @@ with tab3:
 with tab4:
    show_tab(["Overflade"])
 
+pdf_title = st.text_input("Titel til PDF")
 # ---------- PDF ----------
 def download_image(url):
    try:
@@ -214,7 +215,7 @@ def download_image(url):
    except:
        return None
 
-def lav_pdf(comp):
+def lav_pdf(comp, pdf_title):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
     buffer,
@@ -241,7 +242,7 @@ def lav_pdf(comp):
         elements.append(img)
 
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph("System sammenligning", styles['Title']))
+    elements.append(Paragraph(pdf_title, styles['Title']))
     elements.append(Spacer(1, 15))
 
     image_cells = [""]
@@ -289,9 +290,15 @@ def lav_pdf(comp):
 
     return buffer
 
+# fallback hvis bruger ikke skriver noget
+final_title = pdf_title if pdf_title else "System sammenligning"
+
+# lav sikkert filnavn
+safe_title = "".join(c for c in final_title if c.isalnum() or c in " _-").strip()
+
 st.download_button(
     "📄 Download PDF",
-    lav_pdf(comp_display),
-    file_name="system_sammenligning.pdf",
+    lav_pdf(comp_display, final_title),
+    file_name=f"{safe_title}.pdf",
     mime="application/pdf"
 )
