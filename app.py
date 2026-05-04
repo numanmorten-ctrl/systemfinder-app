@@ -185,7 +185,7 @@ def lav_pdf(comp):
         ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#005AA7")),
         ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
         ("ALIGN", (1, 0), (-1, 0), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("GRID", (0, 1), (-1, -1), 0.5, colors.grey),
     ]))
 
     elements.append(table)
