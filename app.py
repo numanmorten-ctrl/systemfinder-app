@@ -75,7 +75,6 @@ mapping = {
    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
    "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
-   "Partition_Height_sys_met_td_pdm_gpdm": "Højde",
    "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
    "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
    "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
@@ -161,6 +160,19 @@ for row in comp_display.index:
        comp_display.loc[row] = comp_display.loc[row].map(
            lambda x: f"{x}{units[row]}" if x != "-" else "-"
        )
+# 🔴 STYR RÆKKEFØLGE (også PDF)
+preferred_order = [
+    "GWP", "Rw", "C50", "Brand", "Vægt",
+    "Højde iht. brand", "Højde ift. statik",
+    "Tykkelse", "Stolpeafstand", "Skelet",
+    "Beklædning", "Pladelag", "Profil",
+    "Isolering", "Isolering tykkelse",
+    "Overflade"
+]
+
+comp_display = comp_display.loc[
+    [r for r in preferred_order if r in comp_display.index]
+]
 
 # ---------- TAB ----------
 def show_tab(rows):
