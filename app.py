@@ -139,6 +139,16 @@ def download_image(url):
    except:
        return None
 def lav_pdf(comp):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(Paragraph("System sammenligning", styles['Title']))
+    elements.append(Spacer(1, 10))
+
+    # ---------- HEADER MED BILLEDER ----------
     image_cells = [""]
 
     for col in comp.columns:
@@ -158,12 +168,16 @@ def lav_pdf(comp):
         except:
             image_cells.append("")
 
+    # ---------- HEADER MED NAVNE ----------
     header_row = ["Egenskab"] + list(comp.columns)
+
+    # ---------- DATA ----------
     data = [image_cells, header_row]
 
     for index, row in comp.iterrows():
         data.append([index] + list(row))
 
+    # ---------- TABLE ----------
     col_widths = [120] + [180] * len(comp.columns)
     table = Table(data, colWidths=col_widths)
 
@@ -179,15 +193,11 @@ def lav_pdf(comp):
     doc.build(elements)
     buffer.seek(0)
 
-    return buffer   # ✅ nu er den korrekt
+    return buffer
 
-def lav_pdf(comp):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
-
-    styles = getSampleStyleSheet()
-
-    elements = []   # 🔥 DEN MANGLER HOS DIG
-
-    elements.append(Paragraph("System sammenligning", styles['Title']))
-    elements.append(Spacer(1, 10))
+st.download_button(
+    "📄 Download PDF",
+    lav_pdf(comp_display),
+    file_name="system_sammenligning.pdf",
+    mime="application/pdf"
+)
