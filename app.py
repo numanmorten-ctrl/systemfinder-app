@@ -6,6 +6,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.enums import TA_CENTER
 
 st.set_page_config(layout="wide")
 
@@ -282,9 +283,11 @@ def lav_pdf(comp, pdf_title):
         ("FONTSIZE", (0, 0), (-1, -1), 8),  # 🔴 NY
     ]))
 
-    elements.append(table)
+    style_center = styles['Heading2']
+    style_center.alignment = TA_CENTER
+
     elements.append(Spacer(1, 20))
-    elements.append(Paragraph(pdf_title, styles['Heading2']))
+    elements.append(Paragraph(pdf_title, style_center))
 
     doc.build(elements)
     buffer.seek(0)
