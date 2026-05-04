@@ -139,62 +139,48 @@ def download_image(url):
    except:
        return None
 def lav_pdf(comp):
+    image_cells = [""]
 
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    for col in comp.columns:
+        try:
+            row = df[df[name_col] == col]
 
-    styles = getSampleStyleSheet()
-    elements = []
+            if not row.empty:
+                img_url = row[image_col].values[0]
+                img = download_image(img_url)
 
-    elements.append(Paragraph("System sammenligning", styles['Title']))
-    elements.append(Spacer(1, 10))
-
-# ---------- HEADER MED BILLEDER ----------
-image_cells = [""]  # første kolonne = Egenskab
-
-for col in comp.columns:
-    try:
-        row = df[df[name_col] == col]
-
-        if not row.empty:
-            img_url = row[image_col].values[0]
-            img = download_image(img_url)
-
-            if img:
-                image_cells.append(Image(img, width=80, height=80))
+                if img:
+                    image_cells.append(Image(img, width=80, height=80))
+                else:
+                    image_cells.append("")
             else:
                 image_cells.append("")
-        else:
+        except:
             image_cells.append("")
-    except:
-        image_cells.append("")
 
-# ---------- HEADER MED NAVNE ----------
-header_row = ["Egenskab"] + list(comp.columns)
+    header_row = ["Egenskab"] + list(comp.columns)
+    data = [image_cells, header_row]
 
-# ---------- DATA ----------
-data = [image_cells, header_row]
+    for index, row in comp.iterrows():
+        data.append([index] + list(row))
 
-for index, row in comp.iterrows():
-    data.append([index] + list(row))
+    col_widths = [120] + [180] * len(comp.columns)
+    table = Table(data, colWidths=col_widths)
 
-# ---------- TABLE ----------
-col_widths = [120] + [180] * len(comp.columns)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#005AA7")),
+        ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
+        ("ALIGN", (1, 0), (-1, 0), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
 
-table = Table(data, colWidths=col_widths)
+    elements.append(table)
 
-table.setStyle(TableStyle([
-    ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#005AA7")),
-    ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
-    ("ALIGN", (1, 0), (-1, 0), "CENTER"),
-    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-]))
+    doc.build(elements)
+    buffer.seek(0)
 
-elements.append(table)
+    return buffer   # ✅ nu er den korrekt
 
-doc.build(elements)
-buffer.seek(0)
-return buffer
 st.download_button(
    "📄 Download PDF",
    lav_pdf(comp_display),
