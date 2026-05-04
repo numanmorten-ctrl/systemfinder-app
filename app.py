@@ -149,7 +149,7 @@ def lav_pdf(comp):
     logo_url = "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
     logo = download_image(logo_url)
 
-   if logo:
+if logo:
     img = Image(logo)
 
     ratio = img.imageHeight / img.imageWidth
