@@ -72,7 +72,13 @@ cols_to_use = existing_cols + ["display_name"]
 comp = comp[cols_to_use]
 mapping_filtered = {k: v for k, v in mapping.items() if k in comp.columns}
 comp = comp.rename(columns=mapping_filtered)
+# map display_name -> local_name
+name_map = df.set_index("display_name")[name_col].to_dict()
+
 comp = comp.set_index("display_name").T
+
+# skift kolonnenavne til local name
+comp.columns = [name_map.get(col, col) for col in comp.columns]
 comp = comp.dropna(how="all")
 # ---------- FORMAT ----------
 comp = comp.astype(object)
@@ -141,21 +147,25 @@ def lav_pdf(comp):
    elements.append(Spacer(1, 10))
    # ---------- BILLEDER ----------
    image_row = []
-   for system in valg_display:
-       try:
-           row = df[df["display_name"] == system]
-           if not row.empty:
-               img_url = row[image_col].values[0]
-               img = download_image(img_url)
-               if img:
-                   local_name = row[name_col].values[0]
-                   cell = Table([
-                       [Image(img, width=100, height=100)],
-                       [Paragraph(str(local_name), styles['Normal'])]
-                   ])
-                   image_row.append(cell)
-       except Exception as e:
-           print(e)
+
+for col in comp.columns:
+    try:
+        # find original række via local name
+        row = df[df[name_col] == col]
+
+        if not row.empty:
+            img_url = row[image_col].values[0]
+            img = download_image(img_url)
+
+            if img:
+                cell = Table([
+                    [Image(img, width=100, height=100)],
+                    [Paragraph(str(col), styles['Normal'])]
+                ])
+                image_row.append(cell)
+
+    except Exception as e:
+        print(e)
    if image_row:
        elements.append(Table([image_row], hAlign='CENTER'))
        elements.append(Spacer(1, 15))
