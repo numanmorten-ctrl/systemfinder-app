@@ -149,48 +149,48 @@ def lav_pdf(comp):
     elements.append(Paragraph("System sammenligning", styles['Title']))
     elements.append(Spacer(1, 10))
 
-    # ---------- BILLEDER ----------
-    image_row = []
+# ---------- HEADER MED BILLEDER ----------
+image_cells = [""]  # første kolonne = Egenskab
 
-    for col in comp.columns:
-        try:
-            row = df[df[name_col] == col]
+for col in comp.columns:
+    try:
+        row = df[df[name_col] == col]
 
-            if not row.empty:
-                img_url = row[image_col].values[0]
-                img = download_image(img_url)
+        if not row.empty:
+            img_url = row[image_col].values[0]
+            img = download_image(img_url)
 
-                if img:
-                    cell = Table([
-                        [Image(img, width=100, height=100)],
-                        [Paragraph(str(col), styles['Normal'])]
-                    ])
-                    image_row.append(cell)
+            if img:
+                image_cells.append(Image(img, width=80, height=80))
+            else:
+                image_cells.append("")
+        else:
+            image_cells.append("")
+    except:
+        image_cells.append("")
 
-        except Exception as e:
-            print(e)
+# ---------- HEADER MED NAVNE ----------
+header_row = ["Egenskab"] + list(comp.columns)
 
-    if image_row:
-        elements.append(Table([image_row], hAlign='CENTER'))
-        elements.append(Spacer(1, 15))
+# ---------- DATA ----------
+data = [image_cells, header_row]
 
-    # ---------- DATA ----------
-    data = [["Egenskab"] + list(comp.columns)]
+for index, row in comp.iterrows():
+    data.append([index] + list(row))
 
-    for index, row in comp.iterrows():
-        data.append([index] + list(row))
+# ---------- TABLE ----------
+col_widths = [120] + [180] * len(comp.columns)
 
-    col_widths = [120] + [180] * len(comp.columns)
+table = Table(data, colWidths=col_widths)
 
-    table = Table(data, colWidths=col_widths)
+table.setStyle(TableStyle([
+    ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#005AA7")),
+    ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
+    ("ALIGN", (1, 0), (-1, 0), "CENTER"),
+    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+]))
 
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-    ]))
-
-    elements.append(table)
+elements.append(table)
 
     doc.build(elements)
     buffer.seek(0)
