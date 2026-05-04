@@ -49,7 +49,16 @@ df_unique = df_sorted.drop_duplicates(subset="base_id", keep="first")
 df_unique["display_name"] = df_unique[name_col]
 
 # ---------- SELECT ----------
-valg_display = st.multiselect("Vælg systemer", df_unique["display_name"])
+max_systemer = 5
+
+valg_display = st.multiselect(
+    "Vælg systemer (max 5)",
+    df_unique["display_name"]
+)
+
+if len(valg_display) > max_systemer:
+    st.warning(f"Du kan maks vælge {max_systemer} systemer")
+    st.stop()
 
 if not valg_display:
    st.stop()
