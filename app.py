@@ -290,15 +290,13 @@ def lav_pdf(comp, pdf_title):
 
     return buffer
 
-# fallback hvis bruger ikke skriver noget
 final_title = pdf_title if pdf_title else "System sammenligning"
 
-# lav sikkert filnavn
 safe_title = "".join(c for c in final_title if c.isalnum() or c in " _-").strip()
 
 st.download_button(
     "📄 Download PDF",
-    lav_pdf(comp_display, final_title),
+    lav_pdf(comp_display, final_title),   # 🔴 HER er fixet
     file_name=f"{safe_title}.pdf",
     mime="application/pdf"
 )
