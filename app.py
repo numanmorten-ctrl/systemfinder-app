@@ -263,7 +263,7 @@ def lav_pdf(comp):
     for index, row in comp.iterrows():
         data.append([index] + list(row))
 
-    col_widths = [120] + [180] * len(comp.columns)
+    col_widths = [100] + [140] * len(comp.columns)
 
     table = Table(data, colWidths=col_widths)
 
@@ -272,6 +272,7 @@ def lav_pdf(comp):
         ("TEXTCOLOR", (0, 1), (-1, 1), colors.white),
         ("ALIGN", (1, 0), (-1, 0), "CENTER"),
         ("GRID", (0, 1), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),  # 🔴 NY
     ]))
 
     elements.append(table)
