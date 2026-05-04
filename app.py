@@ -149,10 +149,16 @@ def lav_pdf(comp):
     logo_url = "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
     logo = download_image(logo_url)
 
-    if logo:
-        elements.append(Image(logo, width=120, height=40))
+   if logo:
+    img = Image(logo)
 
-    elements.append(Spacer(1, 10))
+    ratio = img.imageHeight / img.imageWidth
+    img.drawWidth = 120
+    img.drawHeight = 120 * ratio
+
+    img.hAlign = "CENTER"
+
+    elements.append(img)
 
     # ---------- TITLE ----------
     elements.append(Paragraph("System sammenligning", styles['Title']))
