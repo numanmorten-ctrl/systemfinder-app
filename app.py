@@ -242,7 +242,6 @@ def lav_pdf(comp, pdf_title):
         elements.append(img)
 
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph(pdf_title, styles['Title']))
     elements.append(Spacer(1, 15))
 
     image_cells = [""]
@@ -284,6 +283,8 @@ def lav_pdf(comp, pdf_title):
     ]))
 
     elements.append(table)
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(pdf_title, styles['Heading2']))
 
     doc.build(elements)
     buffer.seek(0)
