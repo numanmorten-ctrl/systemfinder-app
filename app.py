@@ -283,6 +283,8 @@ def lav_pdf(comp, pdf_title):
         ("FONTSIZE", (0, 0), (-1, -1), 8),  # 🔴 NY
     ]))
 
+    elements.append(table)
+
     style_center = styles['Heading2']
     style_center.alignment = TA_CENTER
 
