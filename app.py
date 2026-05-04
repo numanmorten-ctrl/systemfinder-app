@@ -145,6 +145,16 @@ def lav_pdf(comp):
 
     elements = []
 
+    # ---------- LOGO ----------
+    logo_url = "https://knauf.com/api/download-center/v1/assets/9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
+    logo = download_image(logo_url)
+
+    if logo:
+        elements.append(Image(logo, width=120, height=40))
+
+    elements.append(Spacer(1, 10))
+
+    # ---------- TITLE ----------
     elements.append(Paragraph("System sammenligning", styles['Title']))
     elements.append(Spacer(1, 10))
 
