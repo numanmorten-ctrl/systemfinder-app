@@ -181,9 +181,13 @@ def lav_pdf(comp):
 
     return buffer   # ✅ nu er den korrekt
 
-st.download_button(
-   "📄 Download PDF",
-   lav_pdf(comp_display),
-   file_name="system_sammenligning.pdf",
-   mime="application/pdf"
-)
+def lav_pdf(comp):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+
+    styles = getSampleStyleSheet()
+
+    elements = []   # 🔥 DEN MANGLER HOS DIG
+
+    elements.append(Paragraph("System sammenligning", styles['Title']))
+    elements.append(Spacer(1, 10))
