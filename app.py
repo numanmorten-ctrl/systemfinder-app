@@ -159,6 +159,10 @@ def lav_pdf(comp):
         img.hAlign = "CENTER"
 
         elements.append(img)
+   # ---------- TITLE ----------
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("System sammenligning", styles['Title']))
+    elements.append(Spacer(1, 15))
 
     # ---------- HEADER MED BILLEDER ----------
     image_cells = [""]
