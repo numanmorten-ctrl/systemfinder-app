@@ -192,9 +192,9 @@ table.setStyle(TableStyle([
 
 elements.append(table)
 
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+doc.build(elements)
+buffer.seek(0)
+return buffer
 st.download_button(
    "📄 Download PDF",
    lav_pdf(comp_display),
