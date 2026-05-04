@@ -216,7 +216,14 @@ def download_image(url):
 
 def lav_pdf(comp):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    doc = SimpleDocTemplate(
+    buffer,
+    pagesize=landscape(A4),
+    topMargin=20,
+    bottomMargin=20,
+    leftMargin=30,
+    rightMargin=30
+)
     styles = getSampleStyleSheet()
 
     elements = []
