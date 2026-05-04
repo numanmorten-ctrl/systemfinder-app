@@ -139,51 +139,62 @@ def download_image(url):
    except:
        return None
 def lav_pdf(comp):
-   buffer = io.BytesIO()
-   doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
-   styles = getSampleStyleSheet()
-   elements = []
-   elements.append(Paragraph("System sammenligning", styles['Title']))
-   elements.append(Spacer(1, 10))
-   # ---------- BILLEDER ----------
-   image_row = []
 
-for col in comp.columns:
-    try:
-        # find original række via local name
-        row = df[df[name_col] == col]
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
 
-        if not row.empty:
-            img_url = row[image_col].values[0]
-            img = download_image(img_url)
+    styles = getSampleStyleSheet()
+    elements = []
 
-            if img:
-                cell = Table([
-                    [Image(img, width=100, height=100)],
-                    [Paragraph(str(col), styles['Normal'])]
-                ])
-                image_row.append(cell)
+    elements.append(Paragraph("System sammenligning", styles['Title']))
+    elements.append(Spacer(1, 10))
 
-    except Exception as e:
-        print(e)
-   if image_row:
-       elements.append(Table([image_row], hAlign='CENTER'))
-       elements.append(Spacer(1, 15))
-   # ---------- DATA ----------
-   data = [["Egenskab"] + list(comp.columns)]
-   for index, row in comp.iterrows():
-       data.append([index] + list(row))
-   col_widths = [120] + [180] * len(comp.columns)
-   table = Table(data, colWidths=col_widths)
-   table.setStyle(TableStyle([
-       ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
-       ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-       ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-   ]))
-   elements.append(table)
-   doc.build(elements)
-   buffer.seek(0)
-   return buffer
+    # ---------- BILLEDER ----------
+    image_row = []
+
+    for col in comp.columns:
+        try:
+            row = df[df[name_col] == col]
+
+            if not row.empty:
+                img_url = row[image_col].values[0]
+                img = download_image(img_url)
+
+                if img:
+                    cell = Table([
+                        [Image(img, width=100, height=100)],
+                        [Paragraph(str(col), styles['Normal'])]
+                    ])
+                    image_row.append(cell)
+
+        except Exception as e:
+            print(e)
+
+    if image_row:
+        elements.append(Table([image_row], hAlign='CENTER'))
+        elements.append(Spacer(1, 15))
+
+    # ---------- DATA ----------
+    data = [["Egenskab"] + list(comp.columns)]
+
+    for index, row in comp.iterrows():
+        data.append([index] + list(row))
+
+    col_widths = [120] + [180] * len(comp.columns)
+
+    table = Table(data, colWidths=col_widths)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#005AA7")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 st.download_button(
    "📄 Download PDF",
    lav_pdf(comp_display),
