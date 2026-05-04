@@ -144,7 +144,7 @@ for col in comp.columns:
 comp_display = comp.copy()
 
 units = {
-   "GWP": " kg CO₂e",
+   "GWP": " kgCO2ekv/m²",
    "Rw": " dB",
    "C50": " dB",
    "Vægt": " kg/m²",
