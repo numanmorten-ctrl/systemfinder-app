@@ -151,7 +151,6 @@ units = {
    "Højde": " mm",
    "Højde iht. brand": " mm",
    "Højde ift. statik": " mm",
-   "Tykkelse": " mm",
    "Stolpeafstand": " mm",
    "Isolering tykkelse": " mm"
 }
