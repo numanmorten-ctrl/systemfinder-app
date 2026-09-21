@@ -168,6 +168,24 @@ def get_image_png(url):
 
             "pil_size": None,
 
+            # Ekstra 403-diagnose
+
+            "server": None,
+
+            "via": None,
+
+            "cf_ray": None,
+
+            "x_cache": None,
+
+            "x_served_by": None,
+
+            "x_request_id": None,
+
+            "response_headers": None,
+
+            "body_preview": None,
+
         }
 
         try:
@@ -212,6 +230,14 @@ def get_image_png(url):
 
                     ),
 
+                    "Accept-Language": (
+
+                        "da-DK,da;q=0.9,"
+
+                        "en-US;q=0.8,en;q=0.7"
+
+                    ),
+
                 },
 
             )
@@ -244,7 +270,131 @@ def get_image_png(url):
 
             )
 
+            # ------------------------------------------------
+
+            # RESPONSE HEADERS
+
+            # ------------------------------------------------
+
+            result["server"] = (
+
+                response.headers.get(
+
+                    "Server"
+
+                )
+
+            )
+
+            result["via"] = (
+
+                response.headers.get(
+
+                    "Via"
+
+                )
+
+            )
+
+            result["cf_ray"] = (
+
+                response.headers.get(
+
+                    "CF-Ray"
+
+                )
+
+            )
+
+            result["x_cache"] = (
+
+                response.headers.get(
+
+                    "X-Cache"
+
+                )
+
+            )
+
+            result["x_served_by"] = (
+
+                response.headers.get(
+
+                    "X-Served-By"
+
+                )
+
+            )
+
+            result["x_request_id"] = (
+
+                response.headers.get(
+
+                    "X-Request-ID"
+
+                )
+
+            )
+
+            result["response_headers"] = dict(
+
+                response.headers
+
+            )
+
+            # ------------------------------------------------
+
+            # HTML / TEXT PREVIEW
+
+            # ------------------------------------------------
+
+            content_type = (
+
+                response.headers.get(
+
+                    "Content-Type",
+
+                    "",
+
+                )
+
+                .lower()
+
+            )
+
+            if (
+
+                "text/" in content_type
+
+                or "html" in content_type
+
+                or "json" in content_type
+
+            ):
+
+                try:
+
+                    result["body_preview"] = (
+
+                        response.text[:1500]
+
+                    )
+
+                except Exception:
+
+                    result["body_preview"] = (
+
+                        "<Kunne ikke læse response body>"
+
+                    )
+
             response.raise_for_status()
+
+            # ------------------------------------------------
+
+            # BILLEDE
+
+            # ------------------------------------------------
 
             source = io.BytesIO(
 
@@ -362,6 +512,22 @@ def get_image_png(url):
 
             "pil_size": None,
 
+            "server": None,
+
+            "via": None,
+
+            "cf_ray": None,
+
+            "x_cache": None,
+
+            "x_served_by": None,
+
+            "x_request_id": None,
+
+            "response_headers": None,
+
+            "body_preview": None,
+
             "original_test": None,
 
             "dk_test": None,
@@ -397,6 +563,22 @@ def get_image_png(url):
             "pil_mode": None,
 
             "pil_size": None,
+
+            "server": None,
+
+            "via": None,
+
+            "cf_ray": None,
+
+            "x_cache": None,
+
+            "x_served_by": None,
+
+            "x_request_id": None,
+
+            "response_headers": None,
+
+            "body_preview": None,
 
             "original_test": None,
 
@@ -499,6 +681,243 @@ def get_image_png(url):
 
 # ============================================================
 
+# VIS ÉN HTTP-TEST
+
+# ============================================================
+
+def show_http_test(
+
+    title,
+
+    result,
+
+):
+
+    st.write(
+
+        f"**{title}**"
+
+    )
+
+    if not result:
+
+        st.warning(
+
+            "Ingen testdata."
+
+        )
+
+        return
+
+    if result["success"]:
+
+        st.success(
+
+            "Python hentede billedet korrekt."
+
+        )
+
+    else:
+
+        st.error(
+
+            "Python kunne IKKE hente billedet."
+
+        )
+
+    st.write(
+
+        "HTTP status:",
+
+        result["status"],
+
+    )
+
+    st.write(
+
+        "Content-Type:",
+
+        result["content_type"],
+
+    )
+
+    st.write(
+
+        "Modtaget bytes:",
+
+        result["bytes_received"],
+
+    )
+
+    st.write(
+
+        "Endelig URL:",
+
+        result["final_url"],
+
+    )
+
+    # --------------------------------------------------------
+
+    # VIGTIGE HEADERS
+
+    # --------------------------------------------------------
+
+    st.write(
+
+        "**Vigtige response headers**"
+
+    )
+
+    st.write(
+
+        "Server:",
+
+        result["server"],
+
+    )
+
+    st.write(
+
+        "Via:",
+
+        result["via"],
+
+    )
+
+    st.write(
+
+        "CF-Ray:",
+
+        result["cf_ray"],
+
+    )
+
+    st.write(
+
+        "X-Cache:",
+
+        result["x_cache"],
+
+    )
+
+    st.write(
+
+        "X-Served-By:",
+
+        result["x_served_by"],
+
+    )
+
+    st.write(
+
+        "X-Request-ID:",
+
+        result["x_request_id"],
+
+    )
+
+    # --------------------------------------------------------
+
+    # ALLE HEADERS
+
+    # --------------------------------------------------------
+
+    if result["response_headers"]:
+
+        with st.expander(
+
+            "Alle response headers"
+
+        ):
+
+            st.json(
+
+                result["response_headers"]
+
+            )
+
+    # --------------------------------------------------------
+
+    # BODY PREVIEW
+
+    # --------------------------------------------------------
+
+    if result["body_preview"]:
+
+        st.write(
+
+            "**Første 1.500 tegn af svaret**"
+
+        )
+
+        st.code(
+
+            result["body_preview"],
+
+            language="html",
+
+        )
+
+    # --------------------------------------------------------
+
+    # PILLOW
+
+    # --------------------------------------------------------
+
+    if result["success"]:
+
+        st.write(
+
+            "Pillow format:",
+
+            result["pil_format"],
+
+        )
+
+        st.write(
+
+            "Pillow mode:",
+
+            result["pil_mode"],
+
+        )
+
+        st.write(
+
+            "Billedstørrelse:",
+
+            result["pil_size"],
+
+        )
+
+    # --------------------------------------------------------
+
+    # ERROR
+
+    # --------------------------------------------------------
+
+    if result["error_type"]:
+
+        st.write(
+
+            "Fejltype:",
+
+            result["error_type"],
+
+        )
+
+    if result["error_message"]:
+
+        st.code(
+
+            result["error_message"]
+
+        )
+
+
+# ============================================================
+
 # VIS DIAGNOSE FOR ET BILLEDE
 
 # ============================================================
@@ -529,225 +948,23 @@ def show_image_diagnosis(
 
     )
 
-    # --------------------------------------------------------
+    show_http_test(
 
-    # TEST 1 - ORIGINAL
+        "TEST 1 – Original URL",
 
-    # --------------------------------------------------------
-
-    st.write(
-
-        "**TEST 1 – Original URL**"
+        original,
 
     )
 
-    if original:
+    st.divider()
 
-        if original["success"]:
+    show_http_test(
 
-            st.success(
+        "TEST 2 – DK + da-DK",
 
-                "Original: Python hentede "
-
-                "billedet korrekt."
-
-            )
-
-        else:
-
-            st.error(
-
-                "Original: Python kunne IKKE "
-
-                "hente billedet."
-
-            )
-
-        st.write(
-
-            "HTTP status:",
-
-            original["status"],
-
-        )
-
-        st.write(
-
-            "Content-Type:",
-
-            original["content_type"],
-
-        )
-
-        st.write(
-
-            "Modtaget bytes:",
-
-            original["bytes_received"],
-
-        )
-
-        st.write(
-
-            "Endelig URL:",
-
-            original["final_url"],
-
-        )
-
-        if original["success"]:
-
-            st.write(
-
-                "Pillow format:",
-
-                original["pil_format"],
-
-            )
-
-            st.write(
-
-                "Pillow mode:",
-
-                original["pil_mode"],
-
-            )
-
-            st.write(
-
-                "Billedstørrelse:",
-
-                original["pil_size"],
-
-            )
-
-        if original["error_type"]:
-
-            st.write(
-
-                "Fejltype:",
-
-                original["error_type"],
-
-            )
-
-        if original["error_message"]:
-
-            st.code(
-
-                original["error_message"]
-
-            )
-
-    # --------------------------------------------------------
-
-    # TEST 2 - DK
-
-    # --------------------------------------------------------
-
-    st.write(
-
-        "**TEST 2 – DK + da-DK**"
+        dk,
 
     )
-
-    if dk:
-
-        if dk["success"]:
-
-            st.success(
-
-                "DK: Python hentede "
-
-                "billedet korrekt."
-
-            )
-
-        else:
-
-            st.error(
-
-                "DK: Python kunne IKKE "
-
-                "hente billedet."
-
-            )
-
-        st.write(
-
-            "HTTP status:",
-
-            dk["status"],
-
-        )
-
-        st.write(
-
-            "Content-Type:",
-
-            dk["content_type"],
-
-        )
-
-        st.write(
-
-            "Modtaget bytes:",
-
-            dk["bytes_received"],
-
-        )
-
-        st.write(
-
-            "Endelig URL:",
-
-            dk["final_url"],
-
-        )
-
-        if dk["success"]:
-
-            st.write(
-
-                "Pillow format:",
-
-                dk["pil_format"],
-
-            )
-
-            st.write(
-
-                "Pillow mode:",
-
-                dk["pil_mode"],
-
-            )
-
-            st.write(
-
-                "Billedstørrelse:",
-
-                dk["pil_size"],
-
-            )
-
-        if dk["error_type"]:
-
-            st.write(
-
-                "Fejltype:",
-
-                dk["error_type"],
-
-            )
-
-        if dk["error_message"]:
-
-            st.code(
-
-                dk["error_message"]
-
-            )
 
 
 # ============================================================
@@ -805,13 +1022,21 @@ st.title(
 
 # ============================================================
 
-show_image_diagnosis(
+with st.expander(
 
-    "Knauf logo",
+    "🔧 Diagnose af Knauf logo",
 
-    logo_result,
+    expanded=True,
 
-)
+):
+
+    show_image_diagnosis(
+
+        "Knauf logo",
+
+        logo_result,
+
+    )
 
 
 # ============================================================
@@ -1114,6 +1339,10 @@ for i, system in enumerate(
             )
 
         ):
+
+            # Browseren kan stadig hente billedet,
+
+            # selv om Streamlit-serveren får 403.
 
             cols_img[i].image(
 
@@ -1793,9 +2022,7 @@ def show_tab(rows):
 
         for row in rows
 
-        if row
-
-        in comp_display.index
+        if row in comp_display.index
 
     ]
 
@@ -1846,14 +2073,14 @@ def show_tab(rows):
             )
 
         else:
-            st.info(
+st.info(
 
                 "Ingen data"
 
             )
 
     else:
-        st.info(
+st.info(
 
             "Ingen data"
 
@@ -2075,7 +2302,6 @@ def lav_pdf(
 
     buffer = io.BytesIO()
 
-
     doc = SimpleDocTemplate(
 
         buffer,
@@ -2096,16 +2322,13 @@ def lav_pdf(
 
     )
 
-
     styles = (
 
         getSampleStyleSheet()
 
     )
 
-
     elements = []
-
 
     # --------------------------------------------------------
 
@@ -2126,7 +2349,6 @@ def lav_pdf(
         )
 
     )
-
 
     if pdf_logo:
 
@@ -2154,7 +2376,6 @@ def lav_pdf(
 
         )
 
-
     # --------------------------------------------------------
 
     # SYSTEMBILLEDER
@@ -2166,7 +2387,6 @@ def lav_pdf(
         ""
 
     ]
-
 
     for system in selected_systems:
 
@@ -2180,7 +2400,6 @@ def lav_pdf(
 
         )
 
-
         if image_result:
 
             system_image_data = (
@@ -2192,7 +2411,6 @@ def lav_pdf(
         else:
 
             system_image_data = None
-
 
         pdf_system_image = (
 
@@ -2207,7 +2425,6 @@ def lav_pdf(
             )
 
         )
-
 
         if pdf_system_image:
 
@@ -2224,7 +2441,6 @@ def lav_pdf(
                 ""
 
             )
-
 
     # --------------------------------------------------------
 
@@ -2244,7 +2460,6 @@ def lav_pdf(
 
     )
 
-
     # --------------------------------------------------------
 
     # TABLE DATA
@@ -2258,7 +2473,6 @@ def lav_pdf(
         header_row,
 
     ]
-
 
     for index, row in comp.iterrows():
 
@@ -2277,7 +2491,6 @@ def lav_pdf(
             )
 
         )
-
 
     # --------------------------------------------------------
 
@@ -2299,7 +2512,6 @@ def lav_pdf(
 
     )
 
-
     # --------------------------------------------------------
 
     # TABLE
@@ -2313,7 +2525,6 @@ def lav_pdf(
         colWidths=col_widths,
 
     )
-
 
     table.setStyle(
 
@@ -2429,13 +2640,11 @@ def lav_pdf(
 
     )
 
-
     elements.append(
 
         table
 
     )
-
 
     # --------------------------------------------------------
 
@@ -2449,13 +2658,11 @@ def lav_pdf(
 
     )
 
-
     style_center.alignment = (
 
         TA_CENTER
 
     )
-
 
     elements.append(
 
@@ -2469,7 +2676,6 @@ def lav_pdf(
 
     )
 
-
     elements.append(
 
         Paragraph(
@@ -2482,7 +2688,6 @@ def lav_pdf(
 
     )
 
-
     # --------------------------------------------------------
 
     # BUILD PDF
@@ -2494,7 +2699,6 @@ def lav_pdf(
         elements
 
     )
-
 
     buffer.seek(0)
 
