@@ -37,11 +37,6 @@ image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 # ============================================================
 @st.cache_data(show_spinner=False)
 def get_image_png(url):
-   """
-   Henter et billede fra en URL og konverterer det til PNG-bytes.
-   De samme PNG-bytes kan derefter bruges både af Streamlit
-   og ReportLab.
-   """
    if not isinstance(url, str):
        return None
    if not url.startswith("http"):
@@ -56,12 +51,18 @@ def get_image_png(url):
            },
        )
        response.raise_for_status()
-       source = io.BytesIO(response.content)
+       source = io.BytesIO(
+           response.content
+       )
        image = PILImage.open(source)
        image.load()
-       # Sørg for et format som ReportLab kan håndtere.
-       if image.mode not in ("RGB", "RGBA"):
-           image = image.convert("RGBA")
+       if image.mode not in (
+           "RGB",
+           "RGBA",
+       ):
+           image = image.convert(
+               "RGBA"
+           )
        output = io.BytesIO()
        image.save(
            output,
@@ -74,21 +75,38 @@ def get_image_png(url):
 # ============================================================
 # LOGO
 # ============================================================
-logo_data = get_image_png(logo_url)
+logo_data = get_image_png(
+   logo_url
+)
+
 if logo_data:
    st.image(
        logo_data,
        width=150,
    )
 else:
-   # Fallback til URL, så logoet stadig kan vises i browseren,
-   # selv hvis Python ikke kan hente det.
+   # Browser fallback
    st.image(
        logo_url,
        width=150,
    )
 
-st.title("System sammenligning")
+st.title(
+   "System sammenligning"
+)
+
+# ============================================================
+# MIDLERTIDIG DIAGNOSE - LOGO
+# ============================================================
+if logo_data:
+   st.success(
+       f"DIAGNOSE: Logo hentet af Python "
+       f"({len(logo_data)} bytes)"
+   )
+else:
+   st.error(
+       "DIAGNOSE: Logo kunne IKKE hentes af Python"
+   )
 
 # ============================================================
 # LOAD DATA
@@ -103,6 +121,7 @@ df = pd.read_excel(
 # ============================================================
 cols = []
 counts = {}
+
 for col in df.columns:
    if col in counts:
        counts[col] += 1
@@ -118,17 +137,20 @@ df.columns = cols
 # ============================================================
 # VARIANT LOGIK
 # ============================================================
-df["variant_type"] = df[id_col].str.extract(
+df["variant_type"] = df[
+   id_col
+].str.extract(
    r"_(A|B)\.dk$"
 )
-df["base_id"] = df[id_col].str.replace(
+
+df["base_id"] = df[
+   id_col
+].str.replace(
    r"_(A|B)\.dk$",
    "",
    regex=True,
 )
 
-# B prioriteres som hovedvariant,
-# når A og B tilhører samme base_id.
 df_sorted = df.sort_values(
    "variant_type",
    ascending=False,
@@ -143,7 +165,11 @@ df_unique = (
    .copy()
 )
 
-df_unique["display_name"] = df_unique[name_col]
+df_unique[
+   "display_name"
+] = df_unique[
+   name_col
+]
 
 # ============================================================
 # SYSTEMVÆLGER
@@ -157,7 +183,8 @@ valg_display = st.multiselect(
 
 if len(valg_display) > max_systemer:
    st.warning(
-       f"Du kan maks vælge {max_systemer} systemer"
+       f"Du kan maks vælge "
+       f"{max_systemer} systemer"
    )
    st.stop()
 
@@ -165,54 +192,92 @@ if not valg_display:
    st.stop()
 
 # ============================================================
-# GEM SYSTEMER I BRUGERENS VALGTE RÆKKEFØLGE
+# GEM SYSTEMER I VALGT RÆKKEFØLGE
 # ============================================================
 selected_systems = []
 
-for position, display_name in enumerate(valg_display):
+for position, display_name in enumerate(
+   valg_display
+):
    row = df_unique[
-       df_unique["display_name"] == display_name
+       df_unique["display_name"]
+       == display_name
    ]
    if not row.empty:
        selected_systems.append(
            {
-               "position": position,
-               "display_name": display_name,
-               "base_id": row["base_id"].iloc[0],
-               "name": row[name_col].iloc[0],
-               "image": row[image_col].iloc[0],
+               "position":
+                   position,
+               "display_name":
+                   display_name,
+               "base_id":
+                   row["base_id"].iloc[0],
+               "name":
+                   row[name_col].iloc[0],
+               "image":
+                   row[image_col].iloc[0],
            }
        )
 
 valg_base_ids = [
    system["base_id"]
-   for system in selected_systems
+   for system
+   in selected_systems
 ]
 
 # ============================================================
 # SYSTEMBILLEDER I APP
 # ============================================================
-st.subheader("Systemer")
+st.subheader(
+   "Systemer"
+)
 
 cols_img = st.columns(
    len(selected_systems)
 )
 
-for i, system in enumerate(selected_systems):
+for i, system in enumerate(
+   selected_systems
+):
    img_data = get_image_png(
        system["image"]
    )
+
+   # --------------------------------------------------------
+   # MIDLERTIDIG DIAGNOSE - SYSTEMBILLEDE
+   # --------------------------------------------------------
+   if img_data:
+       st.success(
+           f"DIAGNOSE: {system['name']} – "
+           f"billede hentet af Python "
+           f"({len(img_data)} bytes)"
+       )
+   else:
+       st.error(
+           f"DIAGNOSE: {system['name']} – "
+           f"billede kunne IKKE hentes af Python"
+       )
+
+   # --------------------------------------------------------
+   # VIS BILLEDE
+   # --------------------------------------------------------
    if img_data:
        cols_img[i].image(
            img_data,
            width=180,
        )
    else:
-       # Browser-fallback
-       img_url = system["image"]
+       img_url = system[
+           "image"
+       ]
        if (
-           isinstance(img_url, str)
-           and img_url.startswith("http")
+           isinstance(
+               img_url,
+               str,
+           )
+           and img_url.startswith(
+               "http"
+           )
        ):
            cols_img[i].image(
                img_url,
@@ -261,18 +326,22 @@ mapping = {
 # DATA
 # ============================================================
 comp_raw = df[
-   df["base_id"].isin(valg_base_ids)
+   df["base_id"].isin(
+       valg_base_ids
+   )
 ].copy()
 
 # ============================================================
 # SPLIT A OG B
 # ============================================================
 comp_A = comp_raw[
-   comp_raw["variant_type"] == "A"
+   comp_raw["variant_type"]
+   == "A"
 ]
 
 comp_B = comp_raw[
-   comp_raw["variant_type"] == "B"
+   comp_raw["variant_type"]
+   == "B"
 ]
 
 # ============================================================
@@ -299,13 +368,15 @@ height_merge = pd.merge(
    ),
 )
 
-height_merge = height_merge.rename(
-   columns={
-       "Partition_Height_sys_met_td_pdm_gpdm_brand":
-           "Højde iht. brand",
-       "Partition_Height_sys_met_td_pdm_gpdm_statik":
-           "Højde ift. statik",
-   }
+height_merge = (
+   height_merge.rename(
+       columns={
+           "Partition_Height_sys_met_td_pdm_gpdm_brand":
+               "Højde iht. brand",
+           "Partition_Height_sys_met_td_pdm_gpdm_statik":
+               "Højde ift. statik",
+       }
+   )
 )
 
 height_merge[
@@ -330,24 +401,33 @@ comp = (
 )
 
 # ============================================================
-# BRUGERENS VALGTE RÆKKEFØLGE
+# VALGT RÆKKEFØLGE
 # ============================================================
 order_map = {
    base_id: position
    for position, base_id
-   in enumerate(valg_base_ids)
+   in enumerate(
+       valg_base_ids
+   )
 }
 
-comp["_selection_order"] = (
-   comp["base_id"]
-   .map(order_map)
+comp[
+   "_selection_order"
+] = comp[
+   "base_id"
+].map(
+   order_map
 )
 
 comp = (
    comp
-   .sort_values("_selection_order")
+   .sort_values(
+       "_selection_order"
+   )
    .drop(
-       columns=["_selection_order"]
+       columns=[
+           "_selection_order"
+       ]
    )
 )
 
@@ -382,17 +462,24 @@ comp = comp.merge(
    sort=False,
 )
 
-# Håndhæv rækkefølgen igen efter merge.
-comp["_selection_order"] = (
-   comp["base_id"]
-   .map(order_map)
+# Håndhæv rækkefølgen igen efter merge
+comp[
+   "_selection_order"
+] = comp[
+   "base_id"
+].map(
+   order_map
 )
 
 comp = (
    comp
-   .sort_values("_selection_order")
+   .sort_values(
+       "_selection_order"
+   )
    .drop(
-       columns=["_selection_order"]
+       columns=[
+           "_selection_order"
+       ]
    )
 )
 
@@ -405,7 +492,9 @@ comp = comp.rename(
 
 comp = (
    comp
-   .set_index(name_col)
+   .set_index(
+       name_col
+   )
    .T
 )
 
@@ -416,15 +505,21 @@ comp = comp.dropna(
 # ============================================================
 # FORMAT
 # ============================================================
-comp = comp.astype(object)
+comp = comp.astype(
+   object
+)
 
 def format_value(x):
    if (
        pd.isna(x)
-       or str(x).lower() == "nan"
+       or str(x).lower()
+       == "nan"
    ):
        return "-"
-   if isinstance(x, float):
+   if isinstance(
+       x,
+       float,
+   ):
        return (
            f"{x:.2f}"
            .rstrip("0")
@@ -433,14 +528,18 @@ def format_value(x):
    return x
 
 for col in comp.columns:
-   comp[col] = comp[col].map(
-       format_value
+   comp[col] = (
+       comp[col].map(
+           format_value
+       )
    )
 
 # ============================================================
 # UNITS
 # ============================================================
-comp_display = comp.copy()
+comp_display = (
+   comp.copy()
+)
 
 units = {
    "GWP":
@@ -465,12 +564,18 @@ units = {
 
 for row, unit in units.items():
    if row in comp_display.index:
-       comp_display.loc[row, :] = [
+       comp_display.loc[
+           row,
+           :
+       ] = [
            f"{x}{unit}"
            if x != "-"
            else "-"
            for x in
-           comp_display.loc[row, :].tolist()
+           comp_display.loc[
+               row,
+               :
+           ].tolist()
        ]
 
 # ============================================================
@@ -495,13 +600,17 @@ preferred_order = [
    "Overflade",
 ]
 
-comp_display = comp_display.loc[
-   [
-       row
-       for row in preferred_order
-       if row in comp_display.index
+comp_display = (
+   comp_display.loc[
+       [
+           row
+           for row
+           in preferred_order
+           if row
+           in comp_display.index
+       ]
    ]
-]
+)
 
 # ============================================================
 # TABS
@@ -510,33 +619,53 @@ def show_tab(rows):
    rows_existing = [
        row
        for row in rows
-       if row in comp_display.index
+       if row
+       in comp_display.index
    ]
+
    if rows_existing:
-       df_show = comp_display.loc[
-           rows_existing
-       ]
+       df_show = (
+           comp_display.loc[
+               rows_existing
+           ]
+       )
+
        df_show = df_show[
-           ~(df_show == "-").all(axis=1)
+           ~(
+               df_show == "-"
+           ).all(
+               axis=1
+           )
        ]
+
        if not df_show.empty:
            st.dataframe(
                df_show,
                width="stretch",
-               height=100 + len(df_show) * 35,
+               height=(
+                   100
+                   + len(df_show)
+                   * 35
+               ),
            )
        else:
-           st.info("Ingen data")
+st.info(
+               "Ingen data"
+           )
    else:
-       st.info("Ingen data")
+st.info(
+           "Ingen data"
+       )
 
-tab1, tab2, tab3, tab4 = st.tabs(
-   [
-       "Basis",
-       "Geometri",
-       "Opbygning",
-       "Overflade",
-   ]
+tab1, tab2, tab3, tab4 = (
+   st.tabs(
+       [
+           "Basis",
+           "Geometri",
+           "Opbygning",
+           "Overflade",
+       ]
+   )
 )
 
 with tab1:
@@ -587,7 +716,7 @@ pdf_title = st.text_input(
 )
 
 # ============================================================
-# HJÆLPEFUNKTION TIL REPORTLAB-BILLEDE
+# REPORTLAB BILLEDE
 # ============================================================
 def make_reportlab_image(
    image_bytes,
@@ -596,30 +725,47 @@ def make_reportlab_image(
 ):
    if not image_bytes:
        return None
-   try:
-       # Find original billedstørrelse
-       pil_image = PILImage.open(
-           io.BytesIO(image_bytes)
-       )
-       width, height = pil_image.size
 
-       if width <= 0 or height <= 0:
+   try:
+       pil_image = (
+           PILImage.open(
+               io.BytesIO(
+                   image_bytes
+               )
+           )
+       )
+
+       width, height = (
+           pil_image.size
+       )
+
+       if (
+           width <= 0
+           or height <= 0
+       ):
            return None
 
-       # Bevar billedets proportioner
        scale = min(
            max_width / width,
            max_height / height,
        )
 
-       draw_width = width * scale
-       draw_height = height * scale
+       draw_width = (
+           width * scale
+       )
+
+       draw_height = (
+           height * scale
+       )
 
        return RLImage(
-           io.BytesIO(image_bytes),
+           io.BytesIO(
+               image_bytes
+           ),
            width=draw_width,
            height=draw_height,
        )
+
    except Exception:
        return None
 
@@ -634,52 +780,76 @@ def lav_pdf(
 
    doc = SimpleDocTemplate(
        buffer,
-       pagesize=landscape(A4),
+       pagesize=landscape(
+           A4
+       ),
        topMargin=20,
        bottomMargin=20,
        leftMargin=30,
        rightMargin=30,
    )
 
-   styles = getSampleStyleSheet()
+   styles = (
+       getSampleStyleSheet()
+   )
+
    elements = []
 
    # --------------------------------------------------------
    # KNAUF LOGO
    # --------------------------------------------------------
-   pdf_logo_data = get_image_png(
-       logo_url
+   pdf_logo_data = (
+       get_image_png(
+           logo_url
+       )
    )
 
-   pdf_logo = make_reportlab_image(
-       pdf_logo_data,
-       max_width=120,
-       max_height=60,
+   pdf_logo = (
+       make_reportlab_image(
+           pdf_logo_data,
+           max_width=120,
+           max_height=60,
+       )
    )
 
    if pdf_logo:
-       pdf_logo.hAlign = "CENTER"
+       pdf_logo.hAlign = (
+           "CENTER"
+       )
+
        elements.append(
            pdf_logo
        )
+
        elements.append(
-           Spacer(1, 10)
+           Spacer(
+               1,
+               10,
+           )
        )
 
    # --------------------------------------------------------
    # SYSTEMBILLEDER
    # --------------------------------------------------------
-   image_cells = [""]
+   image_cells = [
+       ""
+   ]
 
    for system in selected_systems:
-       system_image_data = get_image_png(
-           system["image"]
+       system_image_data = (
+           get_image_png(
+               system[
+                   "image"
+               ]
+           )
        )
 
-       pdf_system_image = make_reportlab_image(
-           system_image_data,
-           max_width=80,
-           max_height=80,
+       pdf_system_image = (
+           make_reportlab_image(
+               system_image_data,
+               max_width=80,
+               max_height=80,
+           )
        )
 
        if pdf_system_image:
@@ -687,14 +857,18 @@ def lav_pdf(
                pdf_system_image
            )
        else:
-           image_cells.append("")
+           image_cells.append(
+               ""
+           )
 
    # --------------------------------------------------------
    # HEADER
    # --------------------------------------------------------
    header_row = (
        ["Egenskab"]
-       + list(comp.columns)
+       + list(
+           comp.columns
+       )
    )
 
    # --------------------------------------------------------
@@ -707,8 +881,12 @@ def lav_pdf(
 
    for index, row in comp.iterrows():
        data.append(
-           [index]
-           + list(row)
+           [
+               index
+           ]
+           + list(
+               row
+           )
        )
 
    # --------------------------------------------------------
@@ -716,7 +894,10 @@ def lav_pdf(
    # --------------------------------------------------------
    col_widths = (
        [100]
-       + [140] * len(comp.columns)
+       + [140]
+       * len(
+           comp.columns
+       )
    )
 
    # --------------------------------------------------------
@@ -734,7 +915,9 @@ def lav_pdf(
                    "BACKGROUND",
                    (0, 1),
                    (-1, 1),
-                   colors.HexColor("#005AA7"),
+                   colors.HexColor(
+                       "#005AA7"
+                   ),
                ),
                (
                    "TEXTCOLOR",
@@ -767,7 +950,6 @@ def lav_pdf(
                    (-1, -1),
                    8,
                ),
-               # Giv billedrækken lidt luft
                (
                    "TOPPADDING",
                    (0, 0),
@@ -791,11 +973,19 @@ def lav_pdf(
    # --------------------------------------------------------
    # PDF TITEL
    # --------------------------------------------------------
-   style_center = styles["Heading2"]
-   style_center.alignment = TA_CENTER
+   style_center = (
+       styles["Heading2"]
+   )
+
+   style_center.alignment = (
+       TA_CENTER
+   )
 
    elements.append(
-       Spacer(1, 20)
+       Spacer(
+           1,
+           20,
+       )
    )
 
    elements.append(
@@ -813,6 +1003,7 @@ def lav_pdf(
    )
 
    buffer.seek(0)
+
    return buffer
 
 # ============================================================
@@ -827,8 +1018,10 @@ final_title = (
 safe_title = "".join(
    c
    for c in final_title
-   if c.isalnum()
-   or c in " _-"
+   if (
+       c.isalnum()
+       or c in " _-"
+   )
 ).strip()
 
 pdf_file = lav_pdf(
@@ -839,6 +1032,8 @@ pdf_file = lav_pdf(
 st.download_button(
    "📄 Download PDF",
    pdf_file,
-   file_name=f"{safe_title}.pdf",
+   file_name=(
+       f"{safe_title}.pdf"
+   ),
    mime="application/pdf",
 )
