@@ -202,6 +202,9 @@ def show_tab(rows):
    else:
        st.info("Ingen data")
 
+st.write("Kolonnenavne:", list(comp_display.columns))
+st.write("Dubletter:", comp_display.columns[comp_display.columns.duplicated()].tolist())
+
 tab1, tab2, tab3, tab4 = st.tabs(["Basis", "Geometri", "Opbygning", "Overflade"])
 
 with tab1:
