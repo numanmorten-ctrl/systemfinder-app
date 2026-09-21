@@ -16,9 +16,14 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_CENTER
 
+# ============================================================
+# PAGE SETUP
+# ============================================================
 st.set_page_config(layout="wide")
 
-# ---------- KONSTANTER ----------
+# ============================================================
+# KONSTANTER
+# ============================================================
 logo_url = (
    "https://knauf.com/api/download-center/v1/assets/"
    "9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
@@ -27,32 +32,92 @@ name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-# ---------- LOGO ----------
-st.image(
-   logo_url,
-   width=150,
-)
+# ============================================================
+# BILLEDHÅNDTERING
+# ============================================================
+@st.cache_data(show_spinner=False)
+def get_image_png(url):
+   """
+   Henter et billede fra en URL og konverterer det til PNG-bytes.
+   De samme PNG-bytes kan derefter bruges både af Streamlit
+   og ReportLab.
+   """
+   if not isinstance(url, str):
+       return None
+   if not url.startswith("http"):
+       return None
+   try:
+       response = requests.get(
+           url,
+           timeout=20,
+           headers={
+               "User-Agent": "Mozilla/5.0",
+               "Accept": "image/*",
+           },
+       )
+       response.raise_for_status()
+       source = io.BytesIO(response.content)
+       image = PILImage.open(source)
+       image.load()
+       # Sørg for et format som ReportLab kan håndtere.
+       if image.mode not in ("RGB", "RGBA"):
+           image = image.convert("RGBA")
+       output = io.BytesIO()
+       image.save(
+           output,
+           format="PNG",
+       )
+       return output.getvalue()
+   except Exception:
+       return None
+
+# ============================================================
+# LOGO
+# ============================================================
+logo_data = get_image_png(logo_url)
+if logo_data:
+   st.image(
+       logo_data,
+       width=150,
+   )
+else:
+   # Fallback til URL, så logoet stadig kan vises i browseren,
+   # selv hvis Python ikke kan hente det.
+   st.image(
+       logo_url,
+       width=150,
+   )
+
 st.title("System sammenligning")
 
-# ---------- LOAD DATA ----------
+# ============================================================
+# LOAD DATA
+# ============================================================
 df = pd.read_excel(
    "10_list.xlsx",
    header=1,
 )
 
-# Gør kolonnenavne unikke
+# ============================================================
+# GØR KOLONNENAVNE UNIKKE
+# ============================================================
 cols = []
 counts = {}
 for col in df.columns:
    if col in counts:
        counts[col] += 1
-       cols.append(f"{col}_{counts[col]}")
+       cols.append(
+           f"{col}_{counts[col]}"
+       )
    else:
        counts[col] = 0
        cols.append(col)
+
 df.columns = cols
 
-# ---------- VARIANT LOGIK ----------
+# ============================================================
+# VARIANT LOGIK
+# ============================================================
 df["variant_type"] = df[id_col].str.extract(
    r"_(A|B)\.dk$"
 )
@@ -62,11 +127,13 @@ df["base_id"] = df[id_col].str.replace(
    regex=True,
 )
 
-# B prioriteres, når A/B er to datavarianter
+# B prioriteres som hovedvariant,
+# når A og B tilhører samme base_id.
 df_sorted = df.sort_values(
    "variant_type",
    ascending=False,
 )
+
 df_unique = (
    df_sorted
    .drop_duplicates(
@@ -75,24 +142,33 @@ df_unique = (
    )
    .copy()
 )
+
 df_unique["display_name"] = df_unique[name_col]
 
-# ---------- SELECT ----------
+# ============================================================
+# SYSTEMVÆLGER
+# ============================================================
 max_systemer = 5
+
 valg_display = st.multiselect(
    "Vælg systemer (max 5)",
    df_unique["display_name"],
 )
+
 if len(valg_display) > max_systemer:
    st.warning(
        f"Du kan maks vælge {max_systemer} systemer"
    )
    st.stop()
+
 if not valg_display:
    st.stop()
 
-# Gem valgrækkefølgen eksplicit
+# ============================================================
+# GEM SYSTEMER I BRUGERENS VALGTE RÆKKEFØLGE
+# ============================================================
 selected_systems = []
+
 for position, display_name in enumerate(valg_display):
    row = df_unique[
        df_unique["display_name"] == display_name
@@ -109,61 +185,99 @@ for position, display_name in enumerate(valg_display):
        )
 
 valg_base_ids = [
-   item["base_id"]
-   for item in selected_systems
+   system["base_id"]
+   for system in selected_systems
 ]
 
-# ---------- BILLEDER I APP ----------
+# ============================================================
+# SYSTEMBILLEDER I APP
+# ============================================================
 st.subheader("Systemer")
+
 cols_img = st.columns(
    len(selected_systems)
 )
+
 for i, system in enumerate(selected_systems):
-   img_url = system["image"]
-   if (
-       isinstance(img_url, str)
-       and img_url.startswith("http")
-   ):
+   img_data = get_image_png(
+       system["image"]
+   )
+   if img_data:
        cols_img[i].image(
-           img_url,
+           img_data,
            width=180,
        )
+   else:
+       # Browser-fallback
+       img_url = system["image"]
+       if (
+           isinstance(img_url, str)
+           and img_url.startswith("http")
+       ):
+           cols_img[i].image(
+               img_url,
+               width=180,
+           )
+
    cols_img[i].caption(
        system["name"]
    )
 
-# ---------- MAPPING ----------
+# ============================================================
+# MAPPING
+# ============================================================
 mapping = {
-   "Global_Warming_Potential_sys_met_td_pdm_gpdm": "GWP",
-   "Sound_Reduction_Index_sys_td_pdm_gpdm": "Rw",
-   "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm": "C50",
-   "Fire_Resistance_Class_sys_desc_pdm_gpdm": "Brand",
-   "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm": "Vægt",
-   "Finished_Wall_Thickness_sys_desc_pdm_gpdm": "Tykkelse",
-   "Stud_Spacing_sys_met_td_pdm_gpdm": "Stolpeafstand",
-   "Wall_Grid_sys_desc_pdm_gpdm": "Skelet",
-   "Cladding_sys_desc_pdm_gpdm": "Beklædning",
-   "Cladding_Layers_sys_td_pdm_gpdm": "Pladelag",
-   "Profile_sys_desc_pdm_gpdm": "Profil",
-   "Insulation_Material_sys_desc_pdm_gpdm": "Isolering",
-   "Insulation_Thickness_sys_met_td_pdm_gpdm": "Isolering tykkelse",
-   "Surface_Quality_Class_sys_desc_pdm_gpdm": "Overflade",
+   "Global_Warming_Potential_sys_met_td_pdm_gpdm":
+       "GWP",
+   "Sound_Reduction_Index_sys_td_pdm_gpdm":
+       "Rw",
+   "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm":
+       "C50",
+   "Fire_Resistance_Class_sys_desc_pdm_gpdm":
+       "Brand",
+   "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm":
+       "Vægt",
+   "Finished_Wall_Thickness_sys_desc_pdm_gpdm":
+       "Tykkelse",
+   "Stud_Spacing_sys_met_td_pdm_gpdm":
+       "Stolpeafstand",
+   "Wall_Grid_sys_desc_pdm_gpdm":
+       "Skelet",
+   "Cladding_sys_desc_pdm_gpdm":
+       "Beklædning",
+   "Cladding_Layers_sys_td_pdm_gpdm":
+       "Pladelag",
+   "Profile_sys_desc_pdm_gpdm":
+       "Profil",
+   "Insulation_Material_sys_desc_pdm_gpdm":
+       "Isolering",
+   "Insulation_Thickness_sys_met_td_pdm_gpdm":
+       "Isolering tykkelse",
+   "Surface_Quality_Class_sys_desc_pdm_gpdm":
+       "Overflade",
 }
 
-# ---------- DATA ----------
+# ============================================================
+# DATA
+# ============================================================
 comp_raw = df[
    df["base_id"].isin(valg_base_ids)
 ].copy()
 
-# ---------- SPLIT A OG B ----------
+# ============================================================
+# SPLIT A OG B
+# ============================================================
 comp_A = comp_raw[
    comp_raw["variant_type"] == "A"
 ]
+
 comp_B = comp_raw[
    comp_raw["variant_type"] == "B"
 ]
 
-# ---------- MERGE HØJDER ----------
+# ============================================================
+# HØJDER
+# ============================================================
 height_merge = pd.merge(
    comp_B[
        [
@@ -184,6 +298,7 @@ height_merge = pd.merge(
        "_statik",
    ),
 )
+
 height_merge = height_merge.rename(
    columns={
        "Partition_Height_sys_met_td_pdm_gpdm_brand":
@@ -192,12 +307,16 @@ height_merge = height_merge.rename(
            "Højde ift. statik",
    }
 )
-height_merge["Højde iht. brand"] = (
-   height_merge["Højde iht. brand"]
-   .fillna("-")
-)
 
-# ---------- ÉN VARIANT TIL ØVRIGE DATA ----------
+height_merge[
+   "Højde iht. brand"
+] = height_merge[
+   "Højde iht. brand"
+].fillna("-")
+
+# ============================================================
+# ÉN HOVEDVARIANT TIL ØVRIGE DATA
+# ============================================================
 comp = (
    comp_raw
    .sort_values(
@@ -210,16 +329,20 @@ comp = (
    )
 )
 
-# Sørg for samme rækkefølge som brugerens valg
+# ============================================================
+# BRUGERENS VALGTE RÆKKEFØLGE
+# ============================================================
 order_map = {
    base_id: position
    for position, base_id
    in enumerate(valg_base_ids)
 }
+
 comp["_selection_order"] = (
    comp["base_id"]
    .map(order_map)
 )
+
 comp = (
    comp
    .sort_values("_selection_order")
@@ -228,18 +351,30 @@ comp = (
    )
 )
 
+# ============================================================
+# VÆLG DATAKOLONNER
+# ============================================================
 existing_cols = [
    col
    for col in mapping
    if col in comp.columns
 ]
+
 cols_to_use = (
    existing_cols
-   + ["base_id", name_col]
+   + [
+       "base_id",
+       name_col,
+   ]
 )
-comp = comp[cols_to_use]
 
-# ---------- MERGE HØJDER IND ----------
+comp = comp[
+   cols_to_use
+]
+
+# ============================================================
+# MERGE HØJDER
+# ============================================================
 comp = comp.merge(
    height_merge,
    on="base_id",
@@ -247,12 +382,12 @@ comp = comp.merge(
    sort=False,
 )
 
-# Merge kan ændre rækkefølgen, så håndhæv
-# brugerens valgrækkefølge igen.
+# Håndhæv rækkefølgen igen efter merge.
 comp["_selection_order"] = (
    comp["base_id"]
    .map(order_map)
 )
+
 comp = (
    comp
    .sort_values("_selection_order")
@@ -261,23 +396,33 @@ comp = (
    )
 )
 
+# ============================================================
+# RENAME OG TRANSPOSE
+# ============================================================
 comp = comp.rename(
    columns=mapping
 )
+
 comp = (
    comp
    .set_index(name_col)
    .T
 )
+
 comp = comp.dropna(
    how="all"
 )
 
-# ---------- FORMAT ----------
+# ============================================================
+# FORMAT
+# ============================================================
 comp = comp.astype(object)
 
 def format_value(x):
-   if pd.isna(x) or str(x).lower() == "nan":
+   if (
+       pd.isna(x)
+       or str(x).lower() == "nan"
+   ):
        return "-"
    if isinstance(x, float):
        return (
@@ -292,18 +437,30 @@ for col in comp.columns:
        format_value
    )
 
-# ---------- UNITS ----------
+# ============================================================
+# UNITS
+# ============================================================
 comp_display = comp.copy()
+
 units = {
-   "GWP": " kgCO2ekv/m²",
-   "Rw": " dB",
-   "C50": " dB",
-   "Vægt": " kg/m²",
-   "Højde": " mm",
-   "Højde iht. brand": " mm",
-   "Højde ift. statik": " mm",
-   "Stolpeafstand": " mm",
-   "Isolering tykkelse": " mm",
+   "GWP":
+       " kgCO2ekv/m²",
+   "Rw":
+       " dB",
+   "C50":
+       " dB",
+   "Vægt":
+       " kg/m²",
+   "Højde":
+       " mm",
+   "Højde iht. brand":
+       " mm",
+   "Højde ift. statik":
+       " mm",
+   "Stolpeafstand":
+       " mm",
+   "Isolering tykkelse":
+       " mm",
 }
 
 for row, unit in units.items():
@@ -312,10 +469,13 @@ for row, unit in units.items():
            f"{x}{unit}"
            if x != "-"
            else "-"
-           for x in comp_display.loc[row, :].tolist()
+           for x in
+           comp_display.loc[row, :].tolist()
        ]
 
-# ---------- STYR RÆKKEFØLGE ----------
+# ============================================================
+# RÆKKEFØLGE PÅ EGENSKABER
+# ============================================================
 preferred_order = [
    "GWP",
    "Rw",
@@ -334,6 +494,7 @@ preferred_order = [
    "Isolering tykkelse",
    "Overflade",
 ]
+
 comp_display = comp_display.loc[
    [
        row
@@ -342,14 +503,19 @@ comp_display = comp_display.loc[
    ]
 ]
 
-# ---------- TABS ----------
+# ============================================================
+# TABS
+# ============================================================
 def show_tab(rows):
    rows_existing = [
-       row for row in rows
+       row
+       for row in rows
        if row in comp_display.index
    ]
    if rows_existing:
-       df_show = comp_display.loc[rows_existing]
+       df_show = comp_display.loc[
+           rows_existing
+       ]
        df_show = df_show[
            ~(df_show == "-").all(axis=1)
        ]
@@ -360,76 +526,112 @@ def show_tab(rows):
                height=100 + len(df_show) * 35,
            )
        else:
-           st.info("Ingen data")
+st.info("Ingen data")
    else:
-       st.info("Ingen data")
+st.info("Ingen data")
 
 tab1, tab2, tab3, tab4 = st.tabs(
-   ["Basis", "Geometri", "Opbygning", "Overflade"]
+   [
+       "Basis",
+       "Geometri",
+       "Opbygning",
+       "Overflade",
+   ]
 )
-with tab1:
-   show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
-with tab2:
-   show_tab([
-       "Højde iht. brand",
-       "Højde ift. statik",
-       "Tykkelse",
-       "Stolpeafstand",
-       "Skelet",
-   ])
-with tab3:
-   show_tab([
-       "Beklædning",
-       "Pladelag",
-       "Profil",
-       "Isolering",
-       "Isolering tykkelse",
-   ])
-with tab4:
-   show_tab(["Overflade"])
 
-# ---------- PDF TITEL ----------
+with tab1:
+   show_tab(
+       [
+           "GWP",
+           "Rw",
+           "C50",
+           "Brand",
+           "Vægt",
+       ]
+   )
+
+with tab2:
+   show_tab(
+       [
+           "Højde iht. brand",
+           "Højde ift. statik",
+           "Tykkelse",
+           "Stolpeafstand",
+           "Skelet",
+       ]
+   )
+
+with tab3:
+   show_tab(
+       [
+           "Beklædning",
+           "Pladelag",
+           "Profil",
+           "Isolering",
+           "Isolering tykkelse",
+       ]
+   )
+
+with tab4:
+   show_tab(
+       [
+           "Overflade"
+       ]
+   )
+
+# ============================================================
+# PDF TITEL
+# ============================================================
 pdf_title = st.text_input(
    "Titel til PDF"
 )
 
-# ---------- BILLEDHÅNDTERING TIL PDF ----------
-def download_and_convert_image(url):
-   if (
-       not isinstance(url, str)
-       or not url.startswith("http")
-   ):
+# ============================================================
+# HJÆLPEFUNKTION TIL REPORTLAB-BILLEDE
+# ============================================================
+def make_reportlab_image(
+   image_bytes,
+   max_width,
+   max_height,
+):
+   if not image_bytes:
        return None
    try:
-       response = requests.get(
-           url,
-           timeout=15,
-           headers={
-               "User-Agent": "Mozilla/5.0"
-           },
+       # Find original billedstørrelse
+       pil_image = PILImage.open(
+           io.BytesIO(image_bytes)
        )
-       response.raise_for_status()
-       source = io.BytesIO(
-           response.content
+       width, height = pil_image.size
+
+       if width <= 0 or height <= 0:
+           return None
+
+       # Bevar billedets proportioner
+       scale = min(
+           max_width / width,
+           max_height / height,
        )
-       # Pillow åbner billedet og konverterer
-       # det til et format ReportLab kan læse.
-       image = PILImage.open(source)
-       if image.mode not in ("RGB", "RGBA"):
-           image = image.convert("RGBA")
-       output = io.BytesIO()
-       image.save(
-           output,
-           format="PNG",
+
+       draw_width = width * scale
+       draw_height = height * scale
+
+       return RLImage(
+           io.BytesIO(image_bytes),
+           width=draw_width,
+           height=draw_height,
        )
-       output.seek(0)
-       return output
    except Exception:
        return None
 
-# ---------- PDF ----------
-def lav_pdf(comp, pdf_title):
+# ============================================================
+# PDF
+# ============================================================
+def lav_pdf(
+   comp,
+   pdf_title,
+):
    buffer = io.BytesIO()
+
    doc = SimpleDocTemplate(
        buffer,
        pagesize=landscape(A4),
@@ -438,100 +640,88 @@ def lav_pdf(comp, pdf_title):
        leftMargin=30,
        rightMargin=30,
    )
+
    styles = getSampleStyleSheet()
    elements = []
 
-   # ---------- KNAUF LOGO ----------
-   logo_data = download_and_convert_image(
+   # --------------------------------------------------------
+   # KNAUF LOGO
+   # --------------------------------------------------------
+   pdf_logo_data = get_image_png(
        logo_url
    )
-   if logo_data:
-       try:
-           logo = RLImage(
-               logo_data
-           )
-           ratio = (
-               logo.imageHeight
-               / logo.imageWidth
-           )
-           logo.drawWidth = 120
-           logo.drawHeight = (
-               120 * ratio
-           )
-           logo.hAlign = "CENTER"
-           elements.append(
-               logo
-           )
-           elements.append(
-               Spacer(1, 10)
-           )
-       except Exception:
-           pass
 
-   # ---------- SYSTEMBILLEDER ----------
-   image_cells = [""]
-   # selected_systems er allerede i
-   # præcis brugerens valgte rækkefølge.
-   for system in selected_systems:
-       img_data = (
-           download_and_convert_image(
-               system["image"]
-           )
+   pdf_logo = make_reportlab_image(
+       pdf_logo_data,
+       max_width=120,
+       max_height=60,
+   )
+
+   if pdf_logo:
+       pdf_logo.hAlign = "CENTER"
+       elements.append(
+           pdf_logo
        )
-       if img_data:
-           try:
-               pil_image = PILImage.open(
-                   img_data
-               )
-               width, height = (
-                   pil_image.size
-               )
-               img_data.seek(0)
-               max_width = 80
-               max_height = 80
-               scale = min(
-                   max_width / width,
-                   max_height / height,
-               )
-               draw_width = (
-                   width * scale
-               )
-               draw_height = (
-                   height * scale
-               )
-               pdf_image = RLImage(
-                   img_data,
-                   width=draw_width,
-                   height=draw_height,
-               )
-               image_cells.append(
-                   pdf_image
-               )
-           except Exception:
-               image_cells.append("")
+       elements.append(
+           Spacer(1, 10)
+       )
+
+   # --------------------------------------------------------
+   # SYSTEMBILLEDER
+   # --------------------------------------------------------
+   image_cells = [""]
+
+   for system in selected_systems:
+       system_image_data = get_image_png(
+           system["image"]
+       )
+
+       pdf_system_image = make_reportlab_image(
+           system_image_data,
+           max_width=80,
+           max_height=80,
+       )
+
+       if pdf_system_image:
+           image_cells.append(
+               pdf_system_image
+           )
        else:
            image_cells.append("")
 
-   # ---------- PDF TABEL ----------
+   # --------------------------------------------------------
+   # HEADER
+   # --------------------------------------------------------
    header_row = (
        ["Egenskab"]
        + list(comp.columns)
    )
+
+   # --------------------------------------------------------
+   # TABLE DATA
+   # --------------------------------------------------------
    data = [
        image_cells,
        header_row,
    ]
+
    for index, row in comp.iterrows():
        data.append(
            [index]
            + list(row)
        )
 
+   # --------------------------------------------------------
+   # COLUMN WIDTHS
+   # --------------------------------------------------------
    col_widths = (
        [100]
        + [140] * len(comp.columns)
    )
 
+   # --------------------------------------------------------
+   # TABLE
+   # --------------------------------------------------------
    table = Table(
        data,
        colWidths=col_widths,
@@ -544,9 +734,7 @@ def lav_pdf(comp, pdf_title):
                    "BACKGROUND",
                    (0, 1),
                    (-1, 1),
-                   colors.HexColor(
-                       "#005AA7"
-                   ),
+                   colors.HexColor("#005AA7"),
                ),
                (
                    "TEXTCOLOR",
@@ -579,6 +767,19 @@ def lav_pdf(comp, pdf_title):
                    (-1, -1),
                    8,
                ),
+               # Giv billedrækken lidt luft
+               (
+                   "TOPPADDING",
+                   (0, 0),
+                   (-1, 0),
+                   5,
+               ),
+               (
+                   "BOTTOMPADDING",
+                   (0, 0),
+                   (-1, 0),
+                   5,
+               ),
            ]
        )
    )
@@ -587,12 +788,16 @@ def lav_pdf(comp, pdf_title):
        table
    )
 
-   # ---------- PDF TITEL ----------
+   # --------------------------------------------------------
+   # PDF TITEL
+   # --------------------------------------------------------
    style_center = styles["Heading2"]
    style_center.alignment = TA_CENTER
+
    elements.append(
        Spacer(1, 20)
    )
+
    elements.append(
        Paragraph(
            pdf_title,
@@ -600,13 +805,19 @@ def lav_pdf(comp, pdf_title):
        )
    )
 
+   # --------------------------------------------------------
+   # BUILD PDF
+   # --------------------------------------------------------
    doc.build(
        elements
    )
+
    buffer.seek(0)
    return buffer
 
-# ---------- DOWNLOAD ----------
+# ============================================================
+# DOWNLOAD
+# ============================================================
 final_title = (
    pdf_title
    if pdf_title
@@ -620,12 +831,14 @@ safe_title = "".join(
    or c in " _-"
 ).strip()
 
+pdf_file = lav_pdf(
+   comp_display,
+   final_title,
+)
+
 st.download_button(
    "📄 Download PDF",
-   lav_pdf(
-       comp_display,
-       final_title,
-   ),
+   pdf_file,
    file_name=f"{safe_title}.pdf",
    mime="application/pdf",
 )
