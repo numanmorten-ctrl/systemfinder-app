@@ -1,2766 +1,1194 @@
 import streamlit as st
-
 import pandas as pd
-
-import io
-
-import requests
-
-import sys
-
-import ssl
-
-import PIL
-
-from PIL import Image as PILImage
-
-from reportlab.platypus import (
-
-    SimpleDocTemplate,
-
-    Table,
-
-    TableStyle,
-
-    Paragraph,
-
-    Spacer,
-
-    Image as RLImage,
-
-)
-
-from reportlab.lib import colors
-
-from reportlab.lib.pagesizes import A4, landscape
-
-from reportlab.lib.styles import getSampleStyleSheet
-
-from reportlab.lib.enums import TA_CENTER
-
+import json
+import html
+import streamlit.components.v1 as components
 
 # ============================================================
-
 # PAGE SETUP
-
 # ============================================================
-
-st.set_page_config(layout="wide")
-
-
-# ============================================================
-
-# KONSTANTER
-
-# ============================================================
-
-logo_url = (
-
-    "https://knauf.com/api/download-center/v1/assets/"
-
-    "9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
-
+st.set_page_config(
+   page_title="System sammenligning",
+   layout="wide",
 )
 
+# ============================================================
+# KONSTANTER
+# ============================================================
+logo_url = (
+   "https://knauf.com/api/download-center/v1/assets/"
+   "9cafb5b4-2a20-4020-ac0d-a0475600aeee?download=true"
+)
 name_col = "System_Variant_Name_Local_sys_desc_pdm_gpdm"
-
 id_col = "System_Variant_Number_sys_desc_pdm_gpdm"
-
 image_col = "Picture_System_Variant_sys_desc_pdm_gpdm"
 
-
 # ============================================================
-
-# DIAGNOSE AF MILJØ
-
-# ============================================================
-
-with st.expander(
-
-    "🔧 Teknisk diagnose",
-
-    expanded=True,
-
-):
-
-    st.write(
-
-        "Python:",
-
-        sys.version,
-
-    )
-
-    st.write(
-
-        "Streamlit:",
-
-        st.__version__,
-
-    )
-
-    st.write(
-
-        "Pandas:",
-
-        pd.__version__,
-
-    )
-
-    st.write(
-
-        "Requests:",
-
-        requests.__version__,
-
-    )
-
-    st.write(
-
-        "Pillow:",
-
-        PIL.__version__,
-
-    )
-
-    st.write(
-
-        "OpenSSL:",
-
-        ssl.OPENSSL_VERSION,
-
-    )
-
-
-# ============================================================
-
-# BILLEDHÅNDTERING MED DIAGNOSE
-
-# ============================================================
-
-@st.cache_data(show_spinner=False)
-
-def get_image_png(url):
-
-    def test_url(test_url):
-
-        result = {
-
-            "success": False,
-
-            "data": None,
-
-            "status": None,
-
-            "content_type": None,
-
-            "bytes_received": None,
-
-            "final_url": None,
-
-            "error_type": None,
-
-            "error_message": None,
-
-            "pil_format": None,
-
-            "pil_mode": None,
-
-            "pil_size": None,
-
-            # Ekstra 403-diagnose
-
-            "server": None,
-
-            "via": None,
-
-            "cf_ray": None,
-
-            "x_cache": None,
-
-            "x_served_by": None,
-
-            "x_request_id": None,
-
-            "response_headers": None,
-
-            "body_preview": None,
-
-        }
-
-        try:
-
-            response = requests.get(
-
-                test_url,
-
-                timeout=20,
-
-                allow_redirects=True,
-
-                headers={
-
-                    "User-Agent": (
-
-                        "Mozilla/5.0 "
-
-                        "(Windows NT 10.0; Win64; x64) "
-
-                        "AppleWebKit/537.36 "
-
-                        "(KHTML, like Gecko) "
-
-                        "Chrome/140.0 Safari/537.36"
-
-                    ),
-
-                    "Accept": (
-
-                        "image/avif,"
-
-                        "image/webp,"
-
-                        "image/apng,"
-
-                        "image/svg+xml,"
-
-                        "image/*,"
-
-                        "*/*;q=0.8"
-
-                    ),
-
-                    "Accept-Language": (
-
-                        "da-DK,da;q=0.9,"
-
-                        "en-US;q=0.8,en;q=0.7"
-
-                    ),
-
-                },
-
-            )
-
-            result["status"] = (
-
-                response.status_code
-
-            )
-
-            result["content_type"] = (
-
-                response.headers.get(
-
-                    "Content-Type"
-
-                )
-
-            )
-
-            result["bytes_received"] = (
-
-                len(response.content)
-
-            )
-
-            result["final_url"] = (
-
-                response.url
-
-            )
-
-            # ------------------------------------------------
-
-            # RESPONSE HEADERS
-
-            # ------------------------------------------------
-
-            result["server"] = (
-
-                response.headers.get(
-
-                    "Server"
-
-                )
-
-            )
-
-            result["via"] = (
-
-                response.headers.get(
-
-                    "Via"
-
-                )
-
-            )
-
-            result["cf_ray"] = (
-
-                response.headers.get(
-
-                    "CF-Ray"
-
-                )
-
-            )
-
-            result["x_cache"] = (
-
-                response.headers.get(
-
-                    "X-Cache"
-
-                )
-
-            )
-
-            result["x_served_by"] = (
-
-                response.headers.get(
-
-                    "X-Served-By"
-
-                )
-
-            )
-
-            result["x_request_id"] = (
-
-                response.headers.get(
-
-                    "X-Request-ID"
-
-                )
-
-            )
-
-            result["response_headers"] = dict(
-
-                response.headers
-
-            )
-
-            # ------------------------------------------------
-
-            # HTML / TEXT PREVIEW
-
-            # ------------------------------------------------
-
-            content_type = (
-
-                response.headers.get(
-
-                    "Content-Type",
-
-                    "",
-
-                )
-
-                .lower()
-
-            )
-
-            if (
-
-                "text/" in content_type
-
-                or "html" in content_type
-
-                or "json" in content_type
-
-            ):
-
-                try:
-
-                    result["body_preview"] = (
-
-                        response.text[:1500]
-
-                    )
-
-                except Exception:
-
-                    result["body_preview"] = (
-
-                        "<Kunne ikke læse response body>"
-
-                    )
-
-            response.raise_for_status()
-
-            # ------------------------------------------------
-
-            # BILLEDE
-
-            # ------------------------------------------------
-
-            source = io.BytesIO(
-
-                response.content
-
-            )
-
-            image = PILImage.open(
-
-                source
-
-            )
-
-            image.load()
-
-            result["pil_format"] = (
-
-                image.format
-
-            )
-
-            result["pil_mode"] = (
-
-                image.mode
-
-            )
-
-            result["pil_size"] = (
-
-                image.size
-
-            )
-
-            if image.mode not in (
-
-                "RGB",
-
-                "RGBA",
-
-            ):
-
-                image = image.convert(
-
-                    "RGBA"
-
-                )
-
-            output = io.BytesIO()
-
-            image.save(
-
-                output,
-
-                format="PNG",
-
-            )
-
-            result["data"] = (
-
-                output.getvalue()
-
-            )
-
-            result["success"] = True
-
-        except Exception as e:
-
-            result["error_type"] = (
-
-                type(e).__name__
-
-            )
-
-            result["error_message"] = (
-
-                str(e)
-
-            )
-
-        return result
-
-    # --------------------------------------------------------
-
-    # KONTROLLER URL
-
-    # --------------------------------------------------------
-
-    if not isinstance(url, str):
-
-        return {
-
-            "success": False,
-
-            "data": None,
-
-            "status": None,
-
-            "content_type": None,
-
-            "bytes_received": None,
-
-            "final_url": None,
-
-            "error_type": "InvalidURL",
-
-            "error_message": (
-
-                "URL-værdien er ikke tekst."
-
-            ),
-
-            "pil_format": None,
-
-            "pil_mode": None,
-
-            "pil_size": None,
-
-            "server": None,
-
-            "via": None,
-
-            "cf_ray": None,
-
-            "x_cache": None,
-
-            "x_served_by": None,
-
-            "x_request_id": None,
-
-            "response_headers": None,
-
-            "body_preview": None,
-
-            "original_test": None,
-
-            "dk_test": None,
-
-        }
-
-    if not url.startswith("http"):
-
-        return {
-
-            "success": False,
-
-            "data": None,
-
-            "status": None,
-
-            "content_type": None,
-
-            "bytes_received": None,
-
-            "final_url": None,
-
-            "error_type": "InvalidURL",
-
-            "error_message": (
-
-                "URL starter ikke med http/https."
-
-            ),
-
-            "pil_format": None,
-
-            "pil_mode": None,
-
-            "pil_size": None,
-
-            "server": None,
-
-            "via": None,
-
-            "cf_ray": None,
-
-            "x_cache": None,
-
-            "x_served_by": None,
-
-            "x_request_id": None,
-
-            "response_headers": None,
-
-            "body_preview": None,
-
-            "original_test": None,
-
-            "dk_test": None,
-
-        }
-
-    # --------------------------------------------------------
-
-    # ORIGINAL URL
-
-    # --------------------------------------------------------
-
-    original_url = url
-
-    # --------------------------------------------------------
-
-    # DK URL
-
-    # --------------------------------------------------------
-
-    if "?" in url:
-
-        dk_url = (
-
-            url
-
-            + "&country=dk"
-
-            + "&locale=da-DK"
-
-        )
-
-    else:
-
-        dk_url = (
-
-            url
-
-            + "?country=dk"
-
-            + "&locale=da-DK"
-
-        )
-
-    # --------------------------------------------------------
-
-    # TEST BEGGE URL'ER
-
-    # --------------------------------------------------------
-
-    original_result = test_url(
-
-        original_url
-
-    )
-
-    dk_result = test_url(
-
-        dk_url
-
-    )
-
-    # --------------------------------------------------------
-
-    # VÆLG RESULTAT TIL RESTEN AF APPEN
-
-    # --------------------------------------------------------
-
-    if dk_result["success"]:
-
-        selected_result = (
-
-            dk_result.copy()
-
-        )
-
-    else:
-
-        selected_result = (
-
-            original_result.copy()
-
-        )
-
-    selected_result[
-
-        "original_test"
-
-    ] = original_result
-
-    selected_result[
-
-        "dk_test"
-
-    ] = dk_result
-
-    return selected_result
-
-
-# ============================================================
-
-# VIS ÉN HTTP-TEST
-
-# ============================================================
-
-def show_http_test(
-
-    title,
-
-    result,
-
-):
-
-    st.write(
-
-        f"**{title}**"
-
-    )
-
-    if not result:
-
-        st.warning(
-
-            "Ingen testdata."
-
-        )
-
-        return
-
-    if result["success"]:
-
-        st.success(
-
-            "Python hentede billedet korrekt."
-
-        )
-
-    else:
-
-        st.error(
-
-            "Python kunne IKKE hente billedet."
-
-        )
-
-    st.write(
-
-        "HTTP status:",
-
-        result["status"],
-
-    )
-
-    st.write(
-
-        "Content-Type:",
-
-        result["content_type"],
-
-    )
-
-    st.write(
-
-        "Modtaget bytes:",
-
-        result["bytes_received"],
-
-    )
-
-    st.write(
-
-        "Endelig URL:",
-
-        result["final_url"],
-
-    )
-
-    # --------------------------------------------------------
-
-    # VIGTIGE HEADERS
-
-    # --------------------------------------------------------
-
-    st.write(
-
-        "**Vigtige response headers**"
-
-    )
-
-    st.write(
-
-        "Server:",
-
-        result["server"],
-
-    )
-
-    st.write(
-
-        "Via:",
-
-        result["via"],
-
-    )
-
-    st.write(
-
-        "CF-Ray:",
-
-        result["cf_ray"],
-
-    )
-
-    st.write(
-
-        "X-Cache:",
-
-        result["x_cache"],
-
-    )
-
-    st.write(
-
-        "X-Served-By:",
-
-        result["x_served_by"],
-
-    )
-
-    st.write(
-
-        "X-Request-ID:",
-
-        result["x_request_id"],
-
-    )
-
-    # --------------------------------------------------------
-
-    # ALLE HEADERS
-
-    # --------------------------------------------------------
-
-    if result["response_headers"]:
-
-        with st.expander(
-
-            "Alle response headers"
-
-        ):
-
-            st.json(
-
-                result["response_headers"]
-
-            )
-
-    # --------------------------------------------------------
-
-    # BODY PREVIEW
-
-    # --------------------------------------------------------
-
-    if result["body_preview"]:
-
-        st.write(
-
-            "**Første 1.500 tegn af svaret**"
-
-        )
-
-        st.code(
-
-            result["body_preview"],
-
-            language="html",
-
-        )
-
-    # --------------------------------------------------------
-
-    # PILLOW
-
-    # --------------------------------------------------------
-
-    if result["success"]:
-
-        st.write(
-
-            "Pillow format:",
-
-            result["pil_format"],
-
-        )
-
-        st.write(
-
-            "Pillow mode:",
-
-            result["pil_mode"],
-
-        )
-
-        st.write(
-
-            "Billedstørrelse:",
-
-            result["pil_size"],
-
-        )
-
-    # --------------------------------------------------------
-
-    # ERROR
-
-    # --------------------------------------------------------
-
-    if result["error_type"]:
-
-        st.write(
-
-            "Fejltype:",
-
-            result["error_type"],
-
-        )
-
-    if result["error_message"]:
-
-        st.code(
-
-            result["error_message"]
-
-        )
-
-
-# ============================================================
-
-# VIS DIAGNOSE FOR ET BILLEDE
-
-# ============================================================
-
-def show_image_diagnosis(
-
-    label,
-
-    result,
-
-):
-
-    st.write(
-
-        f"### {label}"
-
-    )
-
-    original = result.get(
-
-        "original_test"
-
-    )
-
-    dk = result.get(
-
-        "dk_test"
-
-    )
-
-    show_http_test(
-
-        "TEST 1 – Original URL",
-
-        original,
-
-    )
-
-    st.divider()
-
-    show_http_test(
-
-        "TEST 2 – DK + da-DK",
-
-        dk,
-
-    )
-
-
-# ============================================================
-
 # LOGO
-
 # ============================================================
-
-logo_result = get_image_png(
-
-    logo_url
-
+st.image(
+   logo_url,
+   width=150,
 )
-
-logo_data = (
-
-    logo_result["data"]
-
-)
-
-
-if logo_data:
-
-    st.image(
-
-        logo_data,
-
-        width=150,
-
-    )
-
-else:
-
-    # Browser fallback
-
-    st.image(
-
-        logo_url,
-
-        width=150,
-
-    )
-
-
 st.title(
-
-    "System sammenligning"
-
+   "System sammenligning"
 )
 
-
 # ============================================================
-
-# LOGO DIAGNOSE
-
-# ============================================================
-
-with st.expander(
-
-    "🔧 Diagnose af Knauf logo",
-
-    expanded=True,
-
-):
-
-    show_image_diagnosis(
-
-        "Knauf logo",
-
-        logo_result,
-
-    )
-
-
-# ============================================================
-
 # LOAD DATA
-
 # ============================================================
-
 df = pd.read_excel(
-
-    "10_list.xlsx",
-
-    header=1,
-
+   "10_list.xlsx",
+   header=1,
 )
 
-
 # ============================================================
-
 # GØR KOLONNENAVNE UNIKKE
-
 # ============================================================
-
 cols = []
-
 counts = {}
-
-
 for col in df.columns:
-
-    if col in counts:
-
-        counts[col] += 1
-
-        cols.append(
-
-            f"{col}_{counts[col]}"
-
-        )
-
-    else:
-
-        counts[col] = 0
-
-        cols.append(col)
-
-
+   if col in counts:
+       counts[col] += 1
+       cols.append(
+           f"{col}_{counts[col]}"
+       )
+   else:
+       counts[col] = 0
+       cols.append(col)
 df.columns = cols
 
-
 # ============================================================
-
 # VARIANT LOGIK
-
 # ============================================================
-
-df["variant_type"] = df[
-
-    id_col
-
-].str.extract(
-
-    r"_(A|B)\.dk$"
-
+df["variant_type"] = (
+   df[id_col]
+   .astype(str)
+   .str.extract(
+       r"_(A|B)\.dk$",
+       expand=False,
+   )
 )
-
-
-df["base_id"] = df[
-
-    id_col
-
-].str.replace(
-
-    r"_(A|B)\.dk$",
-
-    "",
-
-    regex=True,
-
+df["base_id"] = (
+   df[id_col]
+   .astype(str)
+   .str.replace(
+       r"_(A|B)\.dk$",
+       "",
+       regex=True,
+   )
 )
-
 
 df_sorted = df.sort_values(
-
-    "variant_type",
-
-    ascending=False,
-
+   "variant_type",
+   ascending=False,
 )
-
 
 df_unique = (
-
-    df_sorted
-
-    .drop_duplicates(
-
-        subset="base_id",
-
-        keep="first",
-
-    )
-
-    .copy()
-
+   df_sorted
+   .drop_duplicates(
+       subset="base_id",
+       keep="first",
+   )
+   .copy()
 )
 
-
-df_unique[
-
-    "display_name"
-
-] = df_unique[
-
-    name_col
-
-]
-
+df_unique["display_name"] = (
+   df_unique[name_col]
+)
 
 # ============================================================
-
 # SYSTEMVÆLGER
-
 # ============================================================
-
 max_systemer = 5
 
-
 valg_display = st.multiselect(
-
-    "Vælg systemer (max 5)",
-
-    df_unique["display_name"],
-
+   "Vælg systemer (max 5)",
+   df_unique["display_name"],
 )
-
 
 if len(valg_display) > max_systemer:
-
-    st.warning(
-
-        f"Du kan maks vælge "
-
-        f"{max_systemer} systemer"
-
-    )
-
-    st.stop()
-
+   st.warning(
+       f"Du kan maks vælge {max_systemer} systemer"
+   )
+   st.stop()
 
 if not valg_display:
-
-    st.stop()
-
+   st.stop()
 
 # ============================================================
-
 # GEM SYSTEMER I VALGT RÆKKEFØLGE
-
 # ============================================================
-
 selected_systems = []
 
-
 for position, display_name in enumerate(
-
-    valg_display
-
+   valg_display
 ):
-
-    row = df_unique[
-
-        df_unique["display_name"]
-
-        == display_name
-
-    ]
-
-    if not row.empty:
-
-        selected_systems.append(
-
-            {
-
-                "position":
-
-                    position,
-
-                "display_name":
-
-                    display_name,
-
-                "base_id":
-
-                    row["base_id"].iloc[0],
-
-                "name":
-
-                    row[name_col].iloc[0],
-
-                "image":
-
-                    row[image_col].iloc[0],
-
-            }
-
-        )
-
+   row = df_unique[
+       df_unique["display_name"]
+       == display_name
+   ]
+   if not row.empty:
+       image_value = (
+           row[image_col].iloc[0]
+       )
+       if pd.isna(image_value):
+           image_value = ""
+       else:
+           image_value = str(
+               image_value
+           )
+       selected_systems.append(
+           {
+               "position":
+                   position,
+               "display_name":
+                   str(display_name),
+               "base_id":
+                   str(
+                       row[
+                           "base_id"
+                       ].iloc[0]
+                   ),
+               "name":
+                   str(
+                       row[
+                           name_col
+                       ].iloc[0]
+                   ),
+               "image":
+                   image_value,
+           }
+       )
 
 valg_base_ids = [
-
-    system["base_id"]
-
-    for system
-
-    in selected_systems
-
+   system["base_id"]
+   for system
+   in selected_systems
 ]
 
-
 # ============================================================
-
 # SYSTEMBILLEDER I APP
-
 # ============================================================
-
 st.subheader(
-
-    "Systemer"
-
+   "Systemer"
 )
-
 
 cols_img = st.columns(
-
-    len(selected_systems)
-
+   len(selected_systems)
 )
-
-
-system_image_results = {}
-
 
 for i, system in enumerate(
-
-    selected_systems
-
+   selected_systems
 ):
-
-    img_result = get_image_png(
-
-        system["image"]
-
-    )
-
-    system_image_results[
-
-        system["base_id"]
-
-    ] = img_result
-
-    img_data = (
-
-        img_result["data"]
-
-    )
-
-    if img_data:
-
-        cols_img[i].image(
-
-            img_data,
-
-            width=180,
-
-        )
-
-    else:
-
-        img_url = system[
-
-            "image"
-
-        ]
-
-        if (
-
-            isinstance(
-
-                img_url,
-
-                str,
-
-            )
-
-            and img_url.startswith(
-
-                "http"
-
-            )
-
-        ):
-
-            # Browseren kan stadig hente billedet,
-
-            # selv om Streamlit-serveren får 403.
-
-            cols_img[i].image(
-
-                img_url,
-
-                width=180,
-
-            )
-
-    cols_img[i].caption(
-
-        system["name"]
-
-    )
-
+   img_url = system["image"]
+   if (
+       isinstance(img_url, str)
+       and img_url.startswith("http")
+   ):
+       cols_img[i].image(
+           img_url,
+           width=180,
+       )
+   cols_img[i].caption(
+       system["name"]
+   )
 
 # ============================================================
-
-# SYSTEMBILLEDE DIAGNOSE
-
-# ============================================================
-
-with st.expander(
-
-    "🔧 Diagnose af systembilleder",
-
-    expanded=True,
-
-):
-
-    for system in selected_systems:
-
-        show_image_diagnosis(
-
-            system["name"],
-
-            system_image_results[
-
-                system["base_id"]
-
-            ],
-
-        )
-
-        st.divider()
-
-
-# ============================================================
-
 # MAPPING
-
 # ============================================================
-
 mapping = {
-
-    "Global_Warming_Potential_sys_met_td_pdm_gpdm":
-
-        "GWP",
-
-    "Sound_Reduction_Index_sys_td_pdm_gpdm":
-
-        "Rw",
-
-    "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm":
-
-        "C50",
-
-    "Fire_Resistance_Class_sys_desc_pdm_gpdm":
-
-        "Brand",
-
-    "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm":
-
-        "Vægt",
-
-    "Finished_Wall_Thickness_sys_desc_pdm_gpdm":
-
-        "Tykkelse",
-
-    "Stud_Spacing_sys_met_td_pdm_gpdm":
-
-        "Stolpeafstand",
-
-    "Wall_Grid_sys_desc_pdm_gpdm":
-
-        "Skelet",
-
-    "Cladding_sys_desc_pdm_gpdm":
-
-        "Beklædning",
-
-    "Cladding_Layers_sys_td_pdm_gpdm":
-
-        "Pladelag",
-
-    "Profile_sys_desc_pdm_gpdm":
-
-        "Profil",
-
-    "Insulation_Material_sys_desc_pdm_gpdm":
-
-        "Isolering",
-
-    "Insulation_Thickness_sys_met_td_pdm_gpdm":
-
-        "Isolering tykkelse",
-
-    "Surface_Quality_Class_sys_desc_pdm_gpdm":
-
-        "Overflade",
-
+   "Global_Warming_Potential_sys_met_td_pdm_gpdm":
+       "GWP",
+   "Sound_Reduction_Index_sys_td_pdm_gpdm":
+       "Rw",
+   "Spectrum_Adaption_Term_C50_3150_sys_met_td_pdm_gpdm":
+       "C50",
+   "Fire_Resistance_Class_sys_desc_pdm_gpdm":
+       "Brand",
+   "Weight_Per_Unit_Area_sys_met_td_pdm_gpdm":
+       "Vægt",
+   "Finished_Wall_Thickness_sys_desc_pdm_gpdm":
+       "Tykkelse",
+   "Stud_Spacing_sys_met_td_pdm_gpdm":
+       "Stolpeafstand",
+   "Wall_Grid_sys_desc_pdm_gpdm":
+       "Skelet",
+   "Cladding_sys_desc_pdm_gpdm":
+       "Beklædning",
+   "Cladding_Layers_sys_td_pdm_gpdm":
+       "Pladelag",
+   "Profile_sys_desc_pdm_gpdm":
+       "Profil",
+   "Insulation_Material_sys_desc_pdm_gpdm":
+       "Isolering",
+   "Insulation_Thickness_sys_met_td_pdm_gpdm":
+       "Isolering tykkelse",
+   "Surface_Quality_Class_sys_desc_pdm_gpdm":
+       "Overflade",
 }
 
-
 # ============================================================
-
 # DATA
-
 # ============================================================
-
 comp_raw = df[
-
-    df["base_id"].isin(
-
-        valg_base_ids
-
-    )
-
+   df["base_id"].isin(
+       valg_base_ids
+   )
 ].copy()
 
-
 # ============================================================
-
 # SPLIT A OG B
-
 # ============================================================
-
 comp_A = comp_raw[
-
-    comp_raw["variant_type"]
-
-    == "A"
-
+   comp_raw["variant_type"]
+   == "A"
 ]
-
 
 comp_B = comp_raw[
-
-    comp_raw["variant_type"]
-
-    == "B"
-
+   comp_raw["variant_type"]
+   == "B"
 ]
 
-
 # ============================================================
-
 # HØJDER
-
 # ============================================================
+height_col = (
+   "Partition_Height_sys_met_td_pdm_gpdm"
+)
 
 height_merge = pd.merge(
-
-    comp_B[
-
-        [
-
-            "base_id",
-
-            "Partition_Height_sys_met_td_pdm_gpdm",
-
-        ]
-
-    ],
-
-    comp_A[
-
-        [
-
-            "base_id",
-
-            "Partition_Height_sys_met_td_pdm_gpdm",
-
-        ]
-
-    ],
-
-    on="base_id",
-
-    how="outer",
-
-    suffixes=(
-
-        "_brand",
-
-        "_statik",
-
-    ),
-
+   comp_B[
+       [
+           "base_id",
+           height_col,
+       ]
+   ],
+   comp_A[
+       [
+           "base_id",
+           height_col,
+       ]
+   ],
+   on="base_id",
+   how="outer",
+   suffixes=(
+       "_brand",
+       "_statik",
+   ),
 )
-
 
 height_merge = (
-
-    height_merge.rename(
-
-        columns={
-
-            "Partition_Height_sys_met_td_pdm_gpdm_brand":
-
-                "Højde iht. brand",
-
-            "Partition_Height_sys_met_td_pdm_gpdm_statik":
-
-                "Højde ift. statik",
-
-        }
-
-    )
-
+   height_merge.rename(
+       columns={
+           f"{height_col}_brand":
+               "Højde iht. brand",
+           f"{height_col}_statik":
+               "Højde ift. statik",
+       }
+   )
 )
-
 
 height_merge[
-
-    "Højde iht. brand"
-
+   "Højde iht. brand"
 ] = height_merge[
-
-    "Højde iht. brand"
-
+   "Højde iht. brand"
 ].fillna("-")
 
-
 # ============================================================
-
 # ÉN HOVEDVARIANT TIL ØVRIGE DATA
-
 # ============================================================
-
 comp = (
-
-    comp_raw
-
-    .sort_values(
-
-        "variant_type",
-
-        ascending=False,
-
-    )
-
-    .drop_duplicates(
-
-        subset="base_id",
-
-        keep="first",
-
-    )
-
+   comp_raw
+   .sort_values(
+       "variant_type",
+       ascending=False,
+   )
+   .drop_duplicates(
+       subset="base_id",
+       keep="first",
+   )
 )
 
-
 # ============================================================
-
 # VALGT RÆKKEFØLGE
-
 # ============================================================
-
 order_map = {
-
-    base_id: position
-
-    for position, base_id
-
-    in enumerate(
-
-        valg_base_ids
-
-    )
-
+   base_id: position
+   for position, base_id
+   in enumerate(
+       valg_base_ids
+   )
 }
 
-
-comp[
-
-    "_selection_order"
-
-] = comp[
-
-    "base_id"
-
-].map(
-
-    order_map
-
+comp["_selection_order"] = (
+   comp["base_id"].map(
+       order_map
+   )
 )
-
 
 comp = (
-
-    comp
-
-    .sort_values(
-
-        "_selection_order"
-
-    )
-
-    .drop(
-
-        columns=[
-
-            "_selection_order"
-
-        ]
-
-    )
-
+   comp
+   .sort_values(
+       "_selection_order"
+   )
+   .drop(
+       columns=[
+           "_selection_order"
+       ]
+   )
 )
 
-
 # ============================================================
-
 # VÆLG DATAKOLONNER
-
 # ============================================================
-
 existing_cols = [
-
-    col
-
-    for col in mapping
-
-    if col in comp.columns
-
+   col
+   for col in mapping
+   if col in comp.columns
 ]
-
 
 cols_to_use = (
-
-    existing_cols
-
-    + [
-
-        "base_id",
-
-        name_col,
-
-    ]
-
+   existing_cols
+   + [
+       "base_id",
+       name_col,
+   ]
 )
-
 
 comp = comp[
-
-    cols_to_use
-
+   cols_to_use
 ]
 
-
 # ============================================================
-
 # MERGE HØJDER
-
 # ============================================================
-
 comp = comp.merge(
-
-    height_merge,
-
-    on="base_id",
-
-    how="left",
-
-    sort=False,
-
+   height_merge,
+   on="base_id",
+   how="left",
+   sort=False,
 )
 
-
-comp[
-
-    "_selection_order"
-
-] = comp[
-
-    "base_id"
-
-].map(
-
-    order_map
-
+comp["_selection_order"] = (
+   comp["base_id"].map(
+       order_map
+   )
 )
-
 
 comp = (
-
-    comp
-
-    .sort_values(
-
-        "_selection_order"
-
-    )
-
-    .drop(
-
-        columns=[
-
-            "_selection_order"
-
-        ]
-
-    )
-
+   comp
+   .sort_values(
+       "_selection_order"
+   )
+   .drop(
+       columns=[
+           "_selection_order"
+       ]
+   )
 )
 
-
 # ============================================================
-
 # RENAME OG TRANSPOSE
-
 # ============================================================
-
 comp = comp.rename(
-
-    columns=mapping
-
+   columns=mapping
 )
-
 
 comp = (
-
-    comp
-
-    .set_index(
-
-        name_col
-
-    )
-
-    .T
-
+   comp
+   .set_index(
+       name_col
+   )
+   .T
 )
-
 
 comp = comp.dropna(
-
-    how="all"
-
+   how="all"
 )
 
-
 # ============================================================
-
 # FORMAT
-
 # ============================================================
-
 comp = comp.astype(
-
-    object
-
+   object
 )
-
 
 def format_value(x):
-
-    if (
-
-        pd.isna(x)
-
-        or str(x).lower()
-
-        == "nan"
-
-    ):
-
-        return "-"
-
-    if isinstance(
-
-        x,
-
-        float,
-
-    ):
-
-        return (
-
-            f"{x:.2f}"
-
-            .rstrip("0")
-
-            .rstrip(".")
-
-        )
-
-    return x
-
+   if (
+       pd.isna(x)
+       or str(x).lower() == "nan"
+   ):
+       return "-"
+   if isinstance(
+       x,
+       float,
+   ):
+       return (
+           f"{x:.2f}"
+           .rstrip("0")
+           .rstrip(".")
+       )
+   return str(x)
 
 for col in comp.columns:
-
-    comp[col] = (
-
-        comp[col].map(
-
-            format_value
-
-        )
-
-    )
-
+   comp[col] = (
+       comp[col].map(
+           format_value
+       )
+   )
 
 # ============================================================
-
 # UNITS
-
 # ============================================================
-
-comp_display = (
-
-    comp.copy()
-
-)
-
+comp_display = comp.copy()
 
 units = {
-
-    "GWP":
-
-        " kgCO2ekv/m²",
-
-    "Rw":
-
-        " dB",
-
-    "C50":
-
-        " dB",
-
-    "Vægt":
-
-        " kg/m²",
-
-    "Højde":
-
-        " mm",
-
-    "Højde iht. brand":
-
-        " mm",
-
-    "Højde ift. statik":
-
-        " mm",
-
-    "Stolpeafstand":
-
-        " mm",
-
-    "Isolering tykkelse":
-
-        " mm",
-
+   "GWP":
+       " kgCO2ekv/m²",
+   "Rw":
+       " dB",
+   "C50":
+       " dB",
+   "Vægt":
+       " kg/m²",
+   "Højde":
+       " mm",
+   "Højde iht. brand":
+       " mm",
+   "Højde ift. statik":
+       " mm",
+   "Stolpeafstand":
+       " mm",
+   "Isolering tykkelse":
+       " mm",
 }
 
-
 for row, unit in units.items():
-
-    if row in comp_display.index:
-
-        comp_display.loc[
-
-            row,
-
-            :
-
-        ] = [
-
-            f"{x}{unit}"
-
-            if x != "-"
-
-            else "-"
-
-            for x in
-
-            comp_display.loc[
-
-                row,
-
-                :
-
-            ].tolist()
-
-        ]
-
+   if row in comp_display.index:
+       comp_display.loc[
+           row,
+           :
+       ] = [
+           f"{x}{unit}"
+           if x != "-"
+           else "-"
+           for x in
+           comp_display.loc[
+               row,
+               :
+           ].tolist()
+       ]
 
 # ============================================================
-
 # RÆKKEFØLGE PÅ EGENSKABER
-
 # ============================================================
-
 preferred_order = [
-
-    "GWP",
-
-    "Rw",
-
-    "C50",
-
-    "Brand",
-
-    "Vægt",
-
-    "Højde iht. brand",
-
-    "Højde ift. statik",
-
-    "Tykkelse",
-
-    "Stolpeafstand",
-
-    "Skelet",
-
-    "Beklædning",
-
-    "Pladelag",
-
-    "Profil",
-
-    "Isolering",
-
-    "Isolering tykkelse",
-
-    "Overflade",
-
+   "GWP",
+   "Rw",
+   "C50",
+   "Brand",
+   "Vægt",
+   "Højde iht. brand",
+   "Højde ift. statik",
+   "Tykkelse",
+   "Stolpeafstand",
+   "Skelet",
+   "Beklædning",
+   "Pladelag",
+   "Profil",
+   "Isolering",
+   "Isolering tykkelse",
+   "Overflade",
 ]
 
-
 comp_display = (
-
-    comp_display.loc[
-
-        [
-
-            row
-
-            for row
-
-            in preferred_order
-
-            if row
-
-            in comp_display.index
-
-        ]
-
-    ]
-
+   comp_display.loc[
+       [
+           row
+           for row
+           in preferred_order
+           if row
+           in comp_display.index
+       ]
+   ]
 )
 
-
 # ============================================================
-
 # TABS
-
 # ============================================================
-
 def show_tab(rows):
-
-    rows_existing = [
-
-        row
-
-        for row in rows
-
-        if row in comp_display.index
-
-    ]
-
-    if rows_existing:
-
-        df_show = (
-
-            comp_display.loc[
-
-                rows_existing
-
-            ]
-
-        )
-
-        df_show = df_show[
-
-            ~(
-
-                df_show == "-"
-
-            ).all(
-
-                axis=1
-
-            )
-
-        ]
-
-        if not df_show.empty:
-
-            st.dataframe(
-
-                df_show,
-
-                width="stretch",
-
-                height=(
-
-                    100
-
-                    + len(df_show)
-
-                    * 35
-
-                ),
-
-            )
-
-        else:
-            st.info(
-
-                "Ingen data"
-
-            )
-
-    else:
-        st.info(
-
-            "Ingen data"
-
-        )
-
+   rows_existing = [
+       row
+       for row in rows
+       if row in comp_display.index
+   ]
+   if rows_existing:
+       df_show = (
+           comp_display.loc[
+               rows_existing
+           ]
+       )
+       df_show = df_show[
+           ~(
+               df_show == "-"
+           ).all(
+               axis=1
+           )
+       ]
+       if not df_show.empty:
+           st.dataframe(
+               df_show,
+               width="stretch",
+               height=(
+                   100
+                   + len(df_show)
+                   * 35
+               ),
+           )
+       else:
+st.info(
+               "Ingen data"
+           )
+   else:
+st.info(
+           "Ingen data"
+       )
 
 tab1, tab2, tab3, tab4 = (
-
-    st.tabs(
-
-        [
-
-            "Basis",
-
-            "Geometri",
-
-            "Opbygning",
-
-            "Overflade",
-
-        ]
-
-    )
-
+   st.tabs(
+       [
+           "Basis",
+           "Geometri",
+           "Opbygning",
+           "Overflade",
+       ]
+   )
 )
-
 
 with tab1:
-
-    show_tab(
-
-        [
-
-            "GWP",
-
-            "Rw",
-
-            "C50",
-
-            "Brand",
-
-            "Vægt",
-
-        ]
-
-    )
-
+   show_tab(
+       [
+           "GWP",
+           "Rw",
+           "C50",
+           "Brand",
+           "Vægt",
+       ]
+   )
 
 with tab2:
-
-    show_tab(
-
-        [
-
-            "Højde iht. brand",
-
-            "Højde ift. statik",
-
-            "Tykkelse",
-
-            "Stolpeafstand",
-
-            "Skelet",
-
-        ]
-
-    )
-
+   show_tab(
+       [
+           "Højde iht. brand",
+           "Højde ift. statik",
+           "Tykkelse",
+           "Stolpeafstand",
+           "Skelet",
+       ]
+   )
 
 with tab3:
-
-    show_tab(
-
-        [
-
-            "Beklædning",
-
-            "Pladelag",
-
-            "Profil",
-
-            "Isolering",
-
-            "Isolering tykkelse",
-
-        ]
-
-    )
-
+   show_tab(
+       [
+           "Beklædning",
+           "Pladelag",
+           "Profil",
+           "Isolering",
+           "Isolering tykkelse",
+       ]
+   )
 
 with tab4:
-
-    show_tab(
-
-        [
-
-            "Overflade"
-
-        ]
-
-    )
-
+   show_tab(
+       [
+           "Overflade"
+       ]
+   )
 
 # ============================================================
-
-# PDF TITEL
-
+# PDF
 # ============================================================
+st.divider()
+st.subheader(
+   "PDF"
+)
 
 pdf_title = st.text_input(
-
-    "Titel til PDF"
-
+   "Titel til PDF",
+   value="System sammenligning",
 )
 
-
 # ============================================================
-
-# REPORTLAB BILLEDE
-
+# DATA TIL JAVASCRIPT
 # ============================================================
+pdf_systems = []
+for system in selected_systems:
+   pdf_systems.append(
+       {
+           "name":
+               system["name"],
+           "image":
+               system["image"],
+       }
+   )
 
-def make_reportlab_image(
-
-    image_bytes,
-
-    max_width,
-
-    max_height,
-
+pdf_rows = []
+for row_name, row in (
+   comp_display.iterrows()
 ):
-
-    if not image_bytes:
-
-        return None
-
-    try:
-
-        pil_image = PILImage.open(
-
-            io.BytesIO(
-
-                image_bytes
-
-            )
-
-        )
-
-        pil_image.load()
-
-        width, height = (
-
-            pil_image.size
-
-        )
-
-        if (
-
-            width <= 0
-
-            or height <= 0
-
-        ):
-
-            return None
-
-        scale = min(
-
-            max_width / width,
-
-            max_height / height,
-
-        )
-
-        draw_width = (
-
-            width * scale
-
-        )
-
-        draw_height = (
-
-            height * scale
-
-        )
-
-        return RLImage(
-
-            io.BytesIO(
-
-                image_bytes
-
-            ),
-
-            width=draw_width,
-
-            height=draw_height,
-
-        )
-
-    except Exception:
-
-        return None
-
-
-# ============================================================
-
-# PDF
-
-# ============================================================
-
-def lav_pdf(
-
-    comp,
-
-    pdf_title,
-
-):
-
-    buffer = io.BytesIO()
-
-    doc = SimpleDocTemplate(
-
-        buffer,
-
-        pagesize=landscape(
-
-            A4
-
-        ),
-
-        topMargin=20,
-
-        bottomMargin=20,
-
-        leftMargin=30,
-
-        rightMargin=30,
-
-    )
-
-    styles = (
-
-        getSampleStyleSheet()
-
-    )
-
-    elements = []
-
-    # --------------------------------------------------------
-
-    # KNAUF LOGO
-
-    # --------------------------------------------------------
-
-    pdf_logo = (
-
-        make_reportlab_image(
-
-            logo_data,
-
-            max_width=120,
-
-            max_height=60,
-
-        )
-
-    )
-
-    if pdf_logo:
-
-        pdf_logo.hAlign = (
-
-            "CENTER"
-
-        )
-
-        elements.append(
-
-            pdf_logo
-
-        )
-
-        elements.append(
-
-            Spacer(
-
-                1,
-
-                10,
-
-            )
-
-        )
-
-    # --------------------------------------------------------
-
-    # SYSTEMBILLEDER
-
-    # --------------------------------------------------------
-
-    image_cells = [
-
-        ""
-
-    ]
-
-    for system in selected_systems:
-
-        image_result = (
-
-            system_image_results.get(
-
-                system["base_id"]
-
-            )
-
-        )
-
-        if image_result:
-
-            system_image_data = (
-
-                image_result["data"]
-
-            )
-
-        else:
-
-            system_image_data = None
-
-        pdf_system_image = (
-
-            make_reportlab_image(
-
-                system_image_data,
-
-                max_width=80,
-
-                max_height=80,
-
-            )
-
-        )
-
-        if pdf_system_image:
-
-            image_cells.append(
-
-                pdf_system_image
-
-            )
-
-        else:
-
-            image_cells.append(
-
-                ""
-
-            )
-
-    # --------------------------------------------------------
-
-    # HEADER
-
-    # --------------------------------------------------------
-
-    header_row = (
-
-        ["Egenskab"]
-
-        + list(
-
-            comp.columns
-
-        )
-
-    )
-
-    # --------------------------------------------------------
-
-    # TABLE DATA
-
-    # --------------------------------------------------------
-
-    data = [
-
-        image_cells,
-
-        header_row,
-
-    ]
-
-    for index, row in comp.iterrows():
-
-        data.append(
-
-            [
-
-                index
-
-            ]
-
-            + list(
-
-                row
-
-            )
-
-        )
-
-    # --------------------------------------------------------
-
-    # COLUMN WIDTHS
-
-    # --------------------------------------------------------
-
-    col_widths = (
-
-        [100]
-
-        + [140]
-
-        * len(
-
-            comp.columns
-
-        )
-
-    )
-
-    # --------------------------------------------------------
-
-    # TABLE
-
-    # --------------------------------------------------------
-
-    table = Table(
-
-        data,
-
-        colWidths=col_widths,
-
-    )
-
-    table.setStyle(
-
-        TableStyle(
-
-            [
-
-                (
-
-                    "BACKGROUND",
-
-                    (0, 1),
-
-                    (-1, 1),
-
-                    colors.HexColor(
-
-                        "#005AA7"
-
-                    ),
-
-                ),
-
-                (
-
-                    "TEXTCOLOR",
-
-                    (0, 1),
-
-                    (-1, 1),
-
-                    colors.white,
-
-                ),
-
-                (
-
-                    "ALIGN",
-
-                    (1, 0),
-
-                    (-1, 0),
-
-                    "CENTER",
-
-                ),
-
-                (
-
-                    "VALIGN",
-
-                    (0, 0),
-
-                    (-1, -1),
-
-                    "MIDDLE",
-
-                ),
-
-                (
-
-                    "GRID",
-
-                    (0, 1),
-
-                    (-1, -1),
-
-                    0.5,
-
-                    colors.grey,
-
-                ),
-
-                (
-
-                    "FONTSIZE",
-
-                    (0, 0),
-
-                    (-1, -1),
-
-                    8,
-
-                ),
-
-                (
-
-                    "TOPPADDING",
-
-                    (0, 0),
-
-                    (-1, 0),
-
-                    5,
-
-                ),
-
-                (
-
-                    "BOTTOMPADDING",
-
-                    (0, 0),
-
-                    (-1, 0),
-
-                    5,
-
-                ),
-
-            ]
-
-        )
-
-    )
-
-    elements.append(
-
-        table
-
-    )
-
-    # --------------------------------------------------------
-
-    # PDF TITEL
-
-    # --------------------------------------------------------
-
-    style_center = (
-
-        styles["Heading2"]
-
-    )
-
-    style_center.alignment = (
-
-        TA_CENTER
-
-    )
-
-    elements.append(
-
-        Spacer(
-
-            1,
-
-            20,
-
-        )
-
-    )
-
-    elements.append(
-
-        Paragraph(
-
-            pdf_title,
-
-            style_center,
-
-        )
-
-    )
-
-    # --------------------------------------------------------
-
-    # BUILD PDF
-
-    # --------------------------------------------------------
-
-    doc.build(
-
-        elements
-
-    )
-
-    buffer.seek(0)
-
-    return buffer
-
-
-# ============================================================
-
-# DOWNLOAD
-
-# ============================================================
-
-final_title = (
-
-    pdf_title
-
-    if pdf_title
-
-    else "System sammenligning"
-
+   pdf_rows.append(
+       [
+           str(row_name)
+       ]
+       + [
+           str(value)
+           for value
+           in row.tolist()
+       ]
+   )
+
+pdf_payload = {
+   "title":
+       pdf_title,
+   "logo":
+       logo_url,
+   "systems":
+       pdf_systems,
+   "columns":
+       [
+           str(col)
+           for col
+           in comp_display.columns
+       ],
+   "rows":
+       pdf_rows,
+}
+
+payload_json = json.dumps(
+   pdf_payload,
+   ensure_ascii=False,
 )
 
+# ============================================================
+# BROWSER PDF COMPONENT
+# ============================================================
+pdf_component = f"""
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<script
+   src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+</script>
+<script
+   src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js">
+</script>
+<style>
+body {{
+   font-family:
+       Arial,
+       sans-serif;
+   margin: 0;
+   padding: 0;
+}}
+#pdf-button {{
+   background: white;
+   color: #262730;
+   border:
+       1px solid
+       rgba(49, 51, 63, 0.2);
+   border-radius: 0.5rem;
+   padding:
+       0.5rem
+       0.75rem;
+   font-size: 14px;
+   font-weight: 400;
+   cursor: pointer;
+}}
+#pdf-button:hover {{
+   border-color:
+       rgb(255, 75, 75);
+   color:
+       rgb(255, 75, 75);
+}}
+#pdf-button:disabled {{
+   opacity: 0.6;
+   cursor: wait;
+}}
+#status {{
+   margin-top: 10px;
+   font-size: 13px;
+}}
+.error {{
+   color: #b00020;
+}}
+.success {{
+   color: green;
+}}
+</style>
+</head>
+<body>
+<button
+   id="pdf-button"
+   onclick="createPdf()"
+>
+   📄 Download PDF
+</button>
+<div id="status"></div>
 
-safe_title = "".join(
+<script>
+const payload = {payload_json};
 
-    c
+function setStatus(
+   text,
+   className = ""
+) {{
+   const status =
+       document.getElementById(
+           "status"
+       );
+   status.innerText =
+       text;
+   status.className =
+       className;
+}}
 
-    for c in final_title
+async function imageUrlToDataUrl(
+   url
+) {{
+   if (
+       !url
+       || typeof url !== "string"
+       || !url.startsWith("http")
+   ) {{
+       return null;
+   }}
+   const response =
+       await fetch(
+           url,
+           {{
+               mode: "cors",
+               credentials: "omit"
+           }}
+       );
+   if (!response.ok) {{
+       throw new Error(
+           "HTTP "
+           + response.status
+           + " ved billede: "
+           + url
+       );
+   }}
+   const blob =
+       await response.blob();
+   if (
+       !blob.type.startsWith(
+           "image/"
+       )
+   ) {{
+       throw new Error(
+           "URL returnerede ikke et billede."
+       );
+   }}
+   return await new Promise(
+       (
+           resolve,
+           reject
+       ) => {{
+           const reader =
+               new FileReader();
+           reader.onloadend =
+               () => resolve(
+                   reader.result
+               );
+           reader.onerror =
+               reject;
+           reader.readAsDataURL(
+               blob
+           );
+       }}
+   );
+}}
 
-    if (
+function loadImage(
+   dataUrl
+) {{
+   return new Promise(
+       (
+           resolve,
+           reject
+       ) => {{
+           const img =
+               new Image();
+           img.onload =
+               () => resolve(img);
+           img.onerror =
+               reject;
+           img.src =
+               dataUrl;
+       }}
+   );
+}}
 
-        c.isalnum()
+async function prepareImage(
+   url
+) {{
+   try {{
+       const dataUrl =
+           await imageUrlToDataUrl(
+               url
+           );
+       if (!dataUrl) {{
+           return null;
+       }}
+       const img =
+           await loadImage(
+               dataUrl
+           );
+       return {{
+           dataUrl:
+               dataUrl,
+           width:
+               img.naturalWidth,
+           height:
+               img.naturalHeight
+       }};
+   }}
+   catch (error) {{
+       console.error(
+           error
+       );
+       return null;
+   }}
+}}
 
-        or c in " _-"
+function fitImage(
+   width,
+   height,
+   maxWidth,
+   maxHeight
+) {{
+   const scale =
+       Math.min(
+           maxWidth / width,
+           maxHeight / height
+       );
+   return {{
+       width:
+           width * scale,
+       height:
+           height * scale
+   }};
+}}
 
-    )
+function safeFileName(
+   value
+) {{
+   let name =
+       value
+       || "System sammenligning";
+   name = name.replace(
+       /[\\\\/:*?"<>|]/g,
+       "_"
+   );
+   name = name.trim();
+   if (!name) {{
+       name =
+           "System sammenligning";
+   }}
+   return name;
+}}
 
-).strip()
+async function createPdf() {{
+   const button =
+       document.getElementById(
+           "pdf-button"
+       );
+   button.disabled =
+       true;
+   setStatus(
+       "Henter billeder og opretter PDF..."
+   );
+   try {{
+       const {{
+           jsPDF
+       }} =
+           window.jspdf;
 
+       // ----------------------------------------------------
+       // HENT LOGO
+       // ----------------------------------------------------
+       const logo =
+           await prepareImage(
+               payload.logo
+           );
 
-pdf_file = lav_pdf(
+       // ----------------------------------------------------
+       // HENT SYSTEMBILLEDER
+       // ----------------------------------------------------
+       const systemImages =
+           [];
+       for (
+           const system
+           of payload.systems
+       ) {{
+           const image =
+               await prepareImage(
+                   system.image
+               );
+           systemImages.push(
+               image
+           );
+       }}
 
-    comp_display,
+       // ----------------------------------------------------
+       // PDF
+       // ----------------------------------------------------
+       const doc =
+           new jsPDF({{
+               orientation:
+                   "landscape",
+               unit:
+                   "mm",
+               format:
+                   "a4"
+           }});
 
-    final_title,
+       const pageWidth =
+           doc.internal
+           .pageSize
+           .getWidth();
 
+       // ----------------------------------------------------
+       // LOGO
+       // ----------------------------------------------------
+       let currentY =
+           10;
+       if (logo) {{
+           const fitted =
+               fitImage(
+                   logo.width,
+                   logo.height,
+                   35,
+                   16
+               );
+           doc.addImage(
+               logo.dataUrl,
+               "PNG",
+               (
+                   pageWidth
+                   - fitted.width
+               ) / 2,
+               currentY,
+               fitted.width,
+               fitted.height
+           );
+           currentY +=
+               fitted.height
+               + 5;
+       }}
+
+       // ----------------------------------------------------
+       // TITEL
+       // ----------------------------------------------------
+       doc.setFont(
+           "helvetica",
+           "bold"
+       );
+       doc.setFontSize(
+           15
+       );
+       doc.text(
+           payload.title
+           || "System sammenligning",
+           pageWidth / 2,
+           currentY + 5,
+           {{
+               align:
+                   "center"
+           }}
+       );
+       currentY +=
+           15;
+
+       // ----------------------------------------------------
+       // SYSTEMBILLEDER
+       // ----------------------------------------------------
+       const firstColWidth =
+           42;
+       const usableWidth =
+           pageWidth
+           - 20
+           - firstColWidth;
+       const systemColWidth =
+           usableWidth
+           / payload.systems.length;
+       const imageAreaHeight =
+           35;
+
+       for (
+           let i = 0;
+           i < payload.systems.length;
+           i++
+       ) {{
+           const image =
+               systemImages[i];
+           if (!image) {{
+               continue;
+           }}
+           const fitted =
+               fitImage(
+                   image.width,
+                   image.height,
+                   Math.min(
+                       28,
+                       systemColWidth - 6
+                   ),
+                   27
+               );
+
+           const centerX =
+               10
+               + firstColWidth
+               + (
+                   systemColWidth
+                   * i
+               )
+               + (
+                   systemColWidth
+                   / 2
+               );
+
+           doc.addImage(
+               image.dataUrl,
+               "PNG",
+               centerX
+               - (
+                   fitted.width
+                   / 2
+               ),
+               currentY,
+               fitted.width,
+               fitted.height
+           );
+       }}
+
+       currentY +=
+           imageAreaHeight;
+
+       // ----------------------------------------------------
+       // TABLE HEADER
+       // ----------------------------------------------------
+       const head = [
+           [
+               "Egenskab",
+               ...payload.columns
+           ]
+       ];
+
+       // ----------------------------------------------------
+       // TABLE
+       // ----------------------------------------------------
+       doc.autoTable({{
+           startY:
+               currentY,
+           head:
+               head,
+           body:
+               payload.rows,
+           theme:
+               "grid",
+           margin: {{
+               left:
+                   10,
+               right:
+                   10
+           }},
+           styles: {{
+               font:
+                   "helvetica",
+               fontSize:
+                   7.5,
+               cellPadding:
+                   2,
+               valign:
+                   "middle",
+               overflow:
+                   "linebreak"
+           }},
+           headStyles: {{
+               fillColor:
+                   [0, 90, 167],
+               textColor:
+                   [255, 255, 255],
+               fontStyle:
+                   "bold",
+               halign:
+                   "center"
+           }},
+           columnStyles: {{
+               0: {{
+                   fontStyle:
+                       "bold",
+                   cellWidth:
+                       firstColWidth
+               }}
+           }},
+           didParseCell:
+               function(data) {{
+                   if (
+                       data.section
+                       === "body"
+&& data.column.index
+> 0
+                   ) {{
+                       data.cell.styles.halign =
+                           "center";
+                   }}
+               }}
+       }});
+
+       // ----------------------------------------------------
+       // DOWNLOAD
+       // ----------------------------------------------------
+       const fileName =
+           safeFileName(
+               payload.title
+           )
+           + ".pdf";
+
+       doc.save(
+           fileName
+       );
+
+       setStatus(
+           "PDF oprettet.",
+           "success"
+       );
+   }}
+   catch (error) {{
+       console.error(
+           error
+       );
+       setStatus(
+           "PDF kunne ikke oprettes: "
+           + error.message,
+           "error"
+       );
+   }}
+   finally {{
+       button.disabled =
+           false;
+   }}
+}}
+</script>
+</body>
+</html>
+"""
+
+components.html(
+   pdf_component,
+   height=80,
+   scrolling=False,
 )
-
-
-st.download_button(
-
-    "📄 Download PDF",
-
-    pdf_file,
-
-    file_name=(
-
-        f"{safe_title}.pdf"
-
-    ),
-
-    mime="application/pdf",
-
-)
- 
