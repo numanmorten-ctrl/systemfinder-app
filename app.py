@@ -345,14 +345,11 @@ comp_display = comp_display.loc[
 # ---------- TABS ----------
 def show_tab(rows):
    rows_existing = [
-       row
-       for row in rows
+       row for row in rows
        if row in comp_display.index
    ]
    if rows_existing:
-       df_show = comp_display.loc[
-           rows_existing
-       ]
+       df_show = comp_display.loc[rows_existing]
        df_show = df_show[
            ~(df_show == "-").all(axis=1)
        ]
@@ -368,51 +365,28 @@ st.info("Ingen data")
 st.info("Ingen data")
 
 tab1, tab2, tab3, tab4 = st.tabs(
-   [
-       "Basis",
-       "Geometri",
-       "Opbygning",
-       "Overflade",
-   ]
+   ["Basis", "Geometri", "Opbygning", "Overflade"]
 )
-
 with tab1:
-   show_tab(
-       [
-           "GWP",
-           "Rw",
-           "C50",
-           "Brand",
-           "Vægt",
-       ]
-   )
-
+   show_tab(["GWP", "Rw", "C50", "Brand", "Vægt"])
 with tab2:
-   show_tab(
-       [
-           "Højde iht. brand",
-           "Højde ift. statik",
-           "Tykkelse",
-           "Stolpeafstand",
-           "Skelet",
-       ]
-   )
-
+   show_tab([
+       "Højde iht. brand",
+       "Højde ift. statik",
+       "Tykkelse",
+       "Stolpeafstand",
+       "Skelet",
+   ])
 with tab3:
-   show_tab(
-       [
-           "Beklædning",
-           "Pladelag",
-           "Profil",
-           "Isolering",
-           "Isolering tykkelse",
-       ]
-   )
-
+   show_tab([
+       "Beklædning",
+       "Pladelag",
+       "Profil",
+       "Isolering",
+       "Isolering tykkelse",
+   ])
 with tab4:
-   show_tab(
-       ["Overflade"]
-   )
+   show_tab(["Overflade"])
 
 # ---------- PDF TITEL ----------
 pdf_title = st.text_input(
