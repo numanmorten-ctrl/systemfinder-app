@@ -526,9 +526,9 @@ def show_tab(rows):
                height=100 + len(df_show) * 35,
            )
        else:
-st.info("Ingen data")
+           st.info("Ingen data")
    else:
-st.info("Ingen data")
+       st.info("Ingen data")
 
 tab1, tab2, tab3, tab4 = st.tabs(
    [
