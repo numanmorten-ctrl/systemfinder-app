@@ -1567,14 +1567,14 @@ def show_tab(rows):
             )
 
         else:
-st.info(
+            st.info(
 
                 "Ingen data"
 
             )
 
     else:
-st.info(
+        st.info(
 
             "Ingen data"
 
