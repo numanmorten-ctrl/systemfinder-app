@@ -136,6 +136,11 @@ comp = comp.rename(columns=mapping)
 comp = comp.set_index(name_col).T
 comp = comp.dropna(how="all")
 
+st.write("comp shape:", comp.shape)
+st.write("comp columns:", list(comp.columns))
+st.write("comp duplicate columns:", comp.columns[comp.columns.duplicated()].tolist())
+st.write(comp)
+
 # ---------- FORMAT ----------
 comp = comp.astype(object)
 
