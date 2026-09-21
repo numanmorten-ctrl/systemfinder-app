@@ -139,160 +139,171 @@ with st.expander(
 # ============================================================
 
 @st.cache_data(show_spinner=False)
-
 def get_image_png(url):
-
-    def test_url(test_url):
-
-        result = {
-
-            "success": False,
-
-            "data": None,
-
-            "status": None,
-
-            "content_type": None,
-
-            "bytes_received": None,
-
-            "final_url": None,
-
-            "error_type": None,
-
-            "error_message": None,
-
-            "pil_format": None,
-
-            "pil_mode": None,
-
-            "pil_size": None,
-
-        }
-
-        try:
-
-            response = requests.get(
-
-                test_url,
-
-                timeout=20,
-
-                allow_redirects=True,
-
-                headers={
-
-                    "User-Agent": (
-
-                        "Mozilla/5.0 "
-
-                        "(Windows NT 10.0; Win64; x64) "
-
-                        "AppleWebKit/537.36 "
-
-                        "(KHTML, like Gecko) "
-
-                        "Chrome/140.0 Safari/537.36"
-
-                    ),
-
-                    "Accept": (
-
-                        "image/avif,"
-
-                        "image/webp,"
-
-                        "image/apng,"
-
-                        "image/svg+xml,"
-
-                        "image/*,"
-
-                        "*/*;q=0.8"
-
-                    ),
-
-                },
-
-            )
-
-            result["status"] = response.status_code
-
-            result["content_type"] = response.headers.get(
-
-                "Content-Type"
-
-            )
-
-            result["bytes_received"] = len(
-
-                response.content
-
-            )
-
-            result["final_url"] = response.url
-
-            response.raise_for_status()
-
-            source = io.BytesIO(
-
-                response.content
-
-            )
-
-            image = PILImage.open(
-
-                source
-
-            )
-
-            image.load()
-
-            result["pil_format"] = image.format
-
-            result["pil_mode"] = image.mode
-
-            result["pil_size"] = image.size
-
-            if image.mode not in (
-
-                "RGB",
-
-                "RGBA",
-
-            ):
-
-                image = image.convert(
-
-                    "RGBA"
-
-                )
-
-            output = io.BytesIO()
-
-            image.save(
-
-                output,
-
-                format="PNG",
-
-            )
-
-            result["data"] = output.getvalue()
-
-            result["success"] = True
-
-        except Exception as e:
-
-            result["error_type"] = (
-
-                type(e).__name__
-
-            )
-
-            result["error_message"] = str(e)
-
-        return result
+   def test_url(test_url):
+       result = {
+           "success": False,
+           "data": None,
+           "status": None,
+           "content_type": None,
+           "bytes_received": None,
+           "final_url": None,
+           "error_type": None,
+           "error_message": None,
+           "pil_format": None,
+           "pil_mode": None,
+           "pil_size": None,
+       }
+       try:
+           response = requests.get(
+               test_url,
+               timeout=20,
+               allow_redirects=True,
+               headers={
+                   "User-Agent": (
+                       "Mozilla/5.0 "
+                       "(Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) "
+                       "Chrome/140.0 Safari/537.36"
+                   ),
+                   "Accept": (
+                       "image/avif,"
+                       "image/webp,"
+                       "image/apng,"
+                       "image/svg+xml,"
+                       "image/*,"
+                       "*/*;q=0.8"
+                   ),
+               },
+           )
+           result["status"] = response.status_code
+           result["content_type"] = response.headers.get(
+               "Content-Type"
+           )
+           result["bytes_received"] = len(
+               response.content
+           )
+           result["final_url"] = response.url
+           response.raise_for_status()
+           source = io.BytesIO(
+               response.content
+           )
+           image = PILImage.open(
+               source
+           )
+           image.load()
+           result["pil_format"] = image.format
+           result["pil_mode"] = image.mode
+           result["pil_size"] = image.size
+           if image.mode not in (
+               "RGB",
+               "RGBA",
+           ):
+               image = image.convert(
+                   "RGBA"
+               )
+           output = io.BytesIO()
+           image.save(
+               output,
+               format="PNG",
+           )
+           result["data"] = output.getvalue()
+           result["success"] = True
+       except Exception as e:
+           result["error_type"] = (
+               type(e).__name__
+           )
+           result["error_message"] = str(e)
+       return result
+   # --------------------------------------------------------
+   # KONTROLLER URL
+   # --------------------------------------------------------
+   if not isinstance(url, str):
+       return {
+           "success": False,
+           "data": None,
+           "status": None,
+           "content_type": None,
+           "bytes_received": None,
+           "final_url": None,
+           "error_type": "InvalidURL",
+           "error_message": (
+               "URL-værdien er ikke tekst."
+           ),
+           "pil_format": None,
+           "pil_mode": None,
+           "pil_size": None,
+           "original_test": None,
+           "dk_test": None,
+       }
+   if not url.startswith("http"):
+       return {
+           "success": False,
+           "data": None,
+           "status": None,
+           "content_type": None,
+           "bytes_received": None,
+           "final_url": None,
+           "error_type": "InvalidURL",
+           "error_message": (
+               "URL starter ikke med http/https."
+           ),
+           "pil_format": None,
+           "pil_mode": None,
+           "pil_size": None,
+           "original_test": None,
+           "dk_test": None,
+       }
+   # --------------------------------------------------------
+   # ORIGINAL URL
+   # --------------------------------------------------------
+   original_url = url
+   # --------------------------------------------------------
+   # DK URL
+   # --------------------------------------------------------
+   if "?" in url:
+       dk_url = (
+           url
+           + "&country=dk"
+           + "&locale=da-DK"
+       )
+   else:
+       dk_url = (
+           url
+           + "?country=dk"
+           + "&locale=da-DK"
+       )
+   # --------------------------------------------------------
+   # KØR BEGGE TESTS
+   # --------------------------------------------------------
+   original_result = test_url(
+       original_url
+   )
+   dk_result = test_url(
+       dk_url
+   )
+   # --------------------------------------------------------
+   # VÆLG RESULTAT TIL RESTEN AF APPEN
+   #
+   # Hvis DK virker, bruges den automatisk.
+   # Ellers bruges originalen.
+   # --------------------------------------------------------
+   if dk_result["success"]:
+       selected_result = (
+           dk_result.copy()
+       )
+   else:
+       selected_result = (
+           original_result.copy()
+       )
+   selected_result[
+       "original_test"
+   ] = original_result
+   selected_result[
+       "dk_test"
+   ] = dk_result
+   return selected_result
 
     # --------------------------------------------------------
 
