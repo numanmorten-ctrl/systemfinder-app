@@ -169,11 +169,12 @@ units = {
    "Isolering tykkelse": " mm"
 }
 
-for row in comp_display.index:
-   if row in units:
-       comp_display.loc[row] = comp_display.loc[row].map(
-           lambda x: f"{x}{units[row]}" if x != "-" else "-"
-       )
+for row, unit in units.items():
+   if row in comp_display.index:
+       comp_display.loc[row, :] = [
+           f"{x}{unit}" if x != "-" else "-"
+           for x in comp_display.loc[row, :].tolist()
+       ]
 # 🔴 STYR RÆKKEFØLGE (også PDF)
 preferred_order = [
     "GWP", "Rw", "C50", "Brand", "Vægt",
