@@ -782,6 +782,10 @@ units = {
     "Højde ift. statik":
 
         " mm",
+    
+    "Samlet vægtykkelse":
+
+        " mm",
 
     "Stolpeafstand":
 
