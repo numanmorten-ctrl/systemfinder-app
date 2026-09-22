@@ -1034,7 +1034,7 @@ with tab2:
 
             "Højde ift. statik",
 
-            "Samlet Vægtykkelse",
+            "Samlet vægtykkelse",
 
             "Stolpeafstand",
 
