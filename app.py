@@ -414,7 +414,7 @@ mapping = {
 
     "Finished_Wall_Thickness_sys_desc_pdm_gpdm":
 
-        "Tykkelse",
+        "Samlet vægtykkelse",
 
     "Stud_Spacing_sys_met_td_pdm_gpdm":
 
@@ -783,10 +783,6 @@ units = {
 
         " mm",
 
-    "Tykkelse":
-
-        " mm",
-
     "Stolpeafstand":
 
         " mm",
@@ -855,7 +851,7 @@ preferred_order = [
 
     "Højde ift. statik",
 
-    "Tykkelse",
+    "Samlet vægtykkelse",
 
     "Stolpeafstand",
 
