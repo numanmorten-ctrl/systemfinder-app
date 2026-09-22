@@ -946,23 +946,19 @@ def show_tab(rows):
         if not df_show.empty:
 
             st.dataframe(
-
-                df_show,
-
-                width="stretch",
-
-                height=(
-
-                    100
-
-                    + len(df_show)
-
-                    * 35
-
-                ),
-
+               df_show,
+               width="stretch",
+               height=(
+                   100
+                   + len(df_show) * 35
+               ),
+               column_config={
+                   "_index": st.column_config.TextColumn(
+                       "Egenskab",
+                       width="medium",
+                   )
+               },
             )
-
         else:
             st.info(
 
